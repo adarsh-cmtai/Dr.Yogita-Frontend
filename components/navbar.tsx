@@ -5,20 +5,18 @@ import Link from "next/link"
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import { Menu, X, Calendar, ChevronDown, ChevronRight } from "lucide-react"
-import GoogleFormPopup from "./GoogleFormPopup"; // Path check karein (components folder mein hai?)
+import GoogleFormPopup from "./GoogleFormPopup";
 
-const POPUP_INITIAL_DELAY = 5000; // 5 seconds
-const POPUP_RESHOW_DELAY = 60000; // 1 minute (60,000 ms)
-const POPUP_SUBMITTED_COOLDOWN = 24 * 60 * 60 * 1000; // 24 hours
+const POPUP_INITIAL_DELAY = 5000;
+const POPUP_RESHOW_DELAY = 60000;
+const POPUP_SUBMITTED_COOLDOWN = 24 * 60 * 60 * 1000;
 
 export default function Navbar() {
-  console.log("Navbar: Component rendering or re-rendering."); // Log 1
-
   if (process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true') {
     return (
       <div style={{ textAlign: 'center', padding: '50px', backgroundColor: '#f8d7da' }}>
-        <h1 style={{ color: '#721c24',fontSize:"100px" } }>Site is under maintenance</h1>
-        <p style={{fontSize:"100px"}}>Please check back later!</p>
+        <h1 style={{ color: '#721c24', fontSize: "100px" }}>Site is under maintenance</h1>
+        <p style={{ fontSize: "100px" }}>Please check back later!</p>
       </div>
     );
   }
@@ -50,45 +48,33 @@ export default function Navbar() {
   const toggleMobileServices = () => setMobileServicesOpen(!mobileServicesOpen);
   const toggleHealthInsights = () => setHealthInsightsOpen((prev) => !prev);
 
-  // Popup Logic Effect
   useEffect(() => {
-    console.log("Navbar Popup useEffect: Running. popupCanBeShown:", popupCanBeShown); // Log 2
     if (typeof window === 'undefined') return;
 
-    let popupTimerId: NodeJS.Timeout | undefined;
+    let popupTimerId;
 
-    // Phase 1: Determine if popup *can* be shown based on submission cooldown
     const lastSubmittedStr = localStorage.getItem('popupFormSubmittedTimestamp');
     if (lastSubmittedStr) {
       const lastSubmittedTime = parseInt(lastSubmittedStr, 10);
       if (Date.now() - lastSubmittedTime < POPUP_SUBMITTED_COOLDOWN) {
-        console.log("Navbar Popup useEffect: Cooldown active. Setting popupCanBeShown to false."); // Log 3
-        if (popupCanBeShown) setPopupCanBeShown(false); // Update state only if it's currently true
-        setShowFormPopup(false); // Ensure it's visually hidden
-        return; // Exit effect, no timer needed
+        if (popupCanBeShown) setPopupCanBeShown(false);
+        setShowFormPopup(false);
+        return;
       } else {
-        console.log("Navbar Popup useEffect: Cooldown expired. Removing timestamp."); // Log 4
         localStorage.removeItem('popupFormSubmittedTimestamp');
-        if (!popupCanBeShown) setPopupCanBeShown(true); // Update state if it was false
+        if (!popupCanBeShown) setPopupCanBeShown(true);
       }
     } else {
-      // No submission timestamp, so popup is allowed in principle from submission perspective
       if (!popupCanBeShown) {
-          console.log("Navbar Popup useEffect: No submission timestamp, ensuring popupCanBeShown is true."); // Log 5
-          setPopupCanBeShown(true); // If it got stuck as false for other reasons, reset
+          setPopupCanBeShown(true);
       }
     }
 
-    // Phase 2: If popupCanBeShown is false after Phase 1, don't schedule.
-    // This check uses the LATEST value of popupCanBeShown (if state was updated above, effect will re-run)
     if (!popupCanBeShown) {
-      console.log("Navbar Popup useEffect: popupCanBeShown is false, not scheduling timer."); // Log 6
-      setShowFormPopup(false); // Ensure it's hidden
+      setShowFormPopup(false);
       return;
     }
 
-    // Phase 3: Schedule the popup if it's allowed
-    console.log("Navbar Popup useEffect: popupCanBeShown is true. Proceeding to schedule timer."); // Log 7
     const lastClosedStr = localStorage.getItem('popupLastClosedTimestamp');
     let delayUntilShow = POPUP_INITIAL_DELAY;
 
@@ -98,59 +84,46 @@ export default function Navbar() {
 
       if (timeSinceClosed < POPUP_RESHOW_DELAY) {
         delayUntilShow = POPUP_RESHOW_DELAY - timeSinceClosed;
-        console.log(`Navbar Popup Timer: Recently closed. Reshowing in ${delayUntilShow / 1000}s`); // Log 8
       } else {
-        delayUntilShow = 300; // Small delay if reshow time passed
+        delayUntilShow = 300;
         localStorage.removeItem('popupLastClosedTimestamp');
-        console.log("Navbar Popup Timer: Reshow delay passed. Showing in 0.3s"); // Log 9
       }
-    } else {
-      console.log(`Navbar Popup Timer: Initial show. Delaying by ${delayUntilShow / 1000}s`); // Log 10
     }
     
     popupTimerId = setTimeout(() => {
-      // Final check before showing, primarily for submission status again
       const stillNotSubmittedRecentlyStr = localStorage.getItem('popupFormSubmittedTimestamp');
       const stillNotSubmittedRecently = !stillNotSubmittedRecentlyStr || 
                               (Date.now() - parseInt(stillNotSubmittedRecentlyStr || "0", 10) >= POPUP_SUBMITTED_COOLDOWN);
 
       if(stillNotSubmittedRecently) {
-          console.log("Navbar Popup Timer: Timer fired. Setting showFormPopup to true."); // Log 11
           setShowFormPopup(true);
       } else {
-          console.log("Navbar Popup Timer: Timer fired BUT recently submitted (final check). Not showing."); // Log 12
-          if (popupCanBeShown) setPopupCanBeShown(false); // Ensure it's set to false if this check fails
+          if (popupCanBeShown) setPopupCanBeShown(false);
           setShowFormPopup(false);
       }
     }, delayUntilShow);
 
     return () => {
       if (popupTimerId) {
-        console.log("Navbar Popup useEffect: Cleanup - Clearing timer ID:", popupTimerId); // Log 13
         clearTimeout(popupTimerId);
       }
     };
-  }, [popupCanBeShown]); // Effect depends on popupCanBeShown
-
+  }, [popupCanBeShown]);
 
   const handleClosePopup = useCallback(() => {
-    console.log("Navbar: handleClosePopup called."); // Log 14
     setShowFormPopup(false);
     if (typeof window !== 'undefined') {
       localStorage.setItem('popupLastClosedTimestamp', Date.now().toString());
     }
-    // popupCanBeShown remains true. The main useEffect will re-evaluate on next interaction or if it re-runs.
   }, []);
 
   const handleFormSubmitted = useCallback(() => {
-    console.log("Navbar: handleFormSubmitted called."); // Log 15
     if (typeof window !== 'undefined') {
       localStorage.setItem('popupFormSubmittedTimestamp', Date.now().toString());
     }
-    setPopupCanBeShown(false); // This will trigger the useEffect to re-run
-    setShowFormPopup(false);   // Hide popup immediately
+    setPopupCanBeShown(false);
+    setShowFormPopup(false);
   }, []);
-
 
   const servicesList = [
     { name: "CoreCare Physio", href: "/services/core-care", type: "offline" },
@@ -171,21 +144,16 @@ export default function Navbar() {
     { name: "Stress & Posture Therapy", href: "/services/stress-and-posture-therapy", type: "online" },
   ];
 
-
   const navLinks = [
     { name: "Home", href: "/" },
     { name: "About", href: "/about" },
     { name: "Relief Read", href: "/library" },
     { name: "Nourishwell", href: "/nutrition" },
-    // { name: "Free Gift", href: "/gift" },
   ];
-
-  console.log("Navbar: Rendering JSX. popupCanBeShown:", popupCanBeShown, "showFormPopup:", showFormPopup); // Log 16
 
   return (
     <> 
       <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? "bg-white shadow-md py-2" : "bg-transparent py-4 bg-white"}`}>
-        {/* ... (aapka baaki ka header JSX jaisa pehle tha) ... */}
         <div className="container mx-auto px-4 flex justify-between items-center">
           <Link href="/" className="flex items-center">
             <Image src="/Logo.png" alt="Dr. Yogita Physiotherapy" width={50} height={50} className="mr-3 rounded-lg" />
@@ -195,7 +163,6 @@ export default function Navbar() {
             </div>
           </Link>
 
-          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center justify-evenly space-x-2">
             {navLinks.slice(0, 2).map((link) => (
               <Link
@@ -207,7 +174,6 @@ export default function Navbar() {
               </Link>
             ))}
 
-            {/* Services Dropdown */}
             <div
               className="relative"
               onMouseEnter={() => setServicesDropdownOpen(true)}
@@ -259,7 +225,6 @@ export default function Navbar() {
               </AnimatePresence>
             </div>
 
-            {/* Health Insights Dropdown */}
             <div
               className="relative"
               onMouseEnter={() => setHealthInsightsOpen(true)}
@@ -301,7 +266,6 @@ export default function Navbar() {
               </AnimatePresence>
             </div>
 
-            {/* Explore Dropdown for Shop, Library, Nutrition */}
             <div
               className="relative"
               onMouseEnter={() => setExploreOpen(true)}
@@ -366,13 +330,11 @@ export default function Navbar() {
             </Link>
           </nav>
 
-          {/* Mobile Menu Button */}
           <button onClick={toggleMenu} className="md:hidden text-gray-700 hover:text-pink-800">
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
 
-        {/* Mobile Navigation */}
         <AnimatePresence>
           {isOpen && (
             <motion.div
@@ -393,7 +355,6 @@ export default function Navbar() {
                   </Link>
                 ))}
 
-                {/* Services Accordion */}
                 <div>
                   <button
                     onClick={toggleMobileServices}
@@ -410,7 +371,6 @@ export default function Navbar() {
                         exit={{ opacity: 0, height: 0 }}
                         className="pl-4 mt-1 space-y-1 border-l-2 border-pink-100"
                       >
-                        {/* Offline Services */}
                         <div>
                           <button
                             onClick={toggleOffline} 
@@ -444,7 +404,6 @@ export default function Navbar() {
                           </AnimatePresence>
                         </div>
 
-                        {/* Online Services */}
                         <div>
                           <button
                             onClick={toggleOnline} 
@@ -482,7 +441,6 @@ export default function Navbar() {
                   </AnimatePresence>
                 </div>
 
-                {/* Health Insights Accordion */}
                 <div>
                   <button
                     onClick={toggleHealthInsights}
@@ -507,7 +465,6 @@ export default function Navbar() {
                   </AnimatePresence>
                 </div>
                 
-                {/* Shop (Wellness Resources) Accordion */}
                 <div>
                   <button
                     onClick={toggleWellnessResources}
@@ -542,7 +499,6 @@ export default function Navbar() {
                   </AnimatePresence>
                 </div>
 
-                {/* Remaining links */}
                 {navLinks
                   .filter(
                     (link) =>
@@ -560,7 +516,6 @@ export default function Navbar() {
                     </Link>
                   ))}
 
-                {/* Book Now CTA */}
                 <Link
                   href="/booking"
                   className="block bg-pink-500 hover:bg-pink-600 text-white text-center px-4 py-3 rounded-md text-base font-medium mt-2"
@@ -575,7 +530,6 @@ export default function Navbar() {
         </AnimatePresence>
       </header>
 
-      {/* Render the popup */}
       {popupCanBeShown && ( 
          <GoogleFormPopup
            show={showFormPopup}
