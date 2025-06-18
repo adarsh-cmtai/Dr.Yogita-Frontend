@@ -20,25 +20,25 @@ export default function ContactInfo() {
     {
       icon: <Phone className="h-6 w-6 text-pink-500" />,
       title: "Phone",
-      details: ["+91 98765 43210", "+91 12345 67890"],
+      details: ["+91 7827952450", "+91 7827952450"],
       action: {
         text: "Call Now",
-        href: "tel:+919876543210",
+        href: "tel:+917827952450",
       },
     },
     {
       icon: <Mail className="h-6 w-6 text-pink-500" />,
       title: "Email",
-      details: ["dryogita@example.com", "info@dryogita.com"],
+      details: ["connect@yogitas.com", "connect@yogitas.com"],
       action: {
         text: "Send Email",
-        href: "mailto:dryogita@example.com",
+        href: "mailto:connect@yogitas.com",
       },
     },
     {
       icon: <MapPin className="h-6 w-6 text-pink-500" />,
       title: "Location",
-      details: ["Sector 14, Gurgaon", "Haryana, India - 122001"],
+      details: ["509 sector 31, Gurgaon", "Haryana, India - 122001"],
       action: {
         text: "Get Directions",
         href: "#map",
@@ -47,7 +47,7 @@ export default function ContactInfo() {
     {
       icon: <Clock className="h-6 w-6 text-pink-500" />,
       title: "Working Hours",
-      details: ["Monday - Saturday: 9AM - 7PM", "Sunday: Closed"],
+      details: ["Monday - Saturday: 10AM - 7PM", "Sunday: Closed"],
       action: {
         text: "Book Appointment",
         href: "#",
