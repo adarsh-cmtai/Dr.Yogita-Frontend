@@ -12,6 +12,7 @@ const SLUG_REDIRECTS: Record<string, string> = {
 export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
   const pathname = url.pathname
+  const response = NextResponse.next()
 
   // Check if this is a service page with a shortened slug
   if (pathname.startsWith("/services/")) {
@@ -24,9 +25,30 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  return NextResponse.next()
+  // Admin routes protection
+  if (pathname.startsWith("/admin")) {
+    const isAuthenticated = request.cookies.get("isAuthenticated")?.value === "true"
+
+    // If not authenticated and trying to access any admin route
+    if (!isAuthenticated) {
+      url.pathname = "/login"
+      return NextResponse.redirect(url)
+    }
+  } else {
+    // If user is navigating away from admin routes, remove the auth cookie
+    if (request.cookies.has("isAuthenticated")) {
+      response.cookies.delete("isAuthenticated")
+    }
+  }
+
+  return response
 }
 
 export const config = {
-  matcher: "/services/:slug*",
+  matcher: [
+    "/services/:slug*",
+    "/admin/:path*",
+    "/admin/dashboard/:path*",
+    "/admin/bookings/:path*"
+  ],
 }

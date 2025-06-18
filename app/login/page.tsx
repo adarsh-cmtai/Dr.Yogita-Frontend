@@ -5,19 +5,15 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Lock, Mail } from 'lucide-react';
-import { useRouter } from 'next/navigation'; // <--- Import useRouter
-
-// --- Hardcoded Credentials (FOR DEMONSTRATION ONLY) ---
-const FIXED_EMAIL = "admin@example.com";
-const FIXED_PASSWORD = "password123";
-// -------------------------------------------------------
+import { useRouter } from 'next/navigation';
+import Cookies from 'js-cookie';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter(); // <--- Initialize router
+  const router = useRouter();
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -30,15 +26,23 @@ export default function LoginPage() {
       return;
     }
 
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (email === FIXED_EMAIL && password === FIXED_PASSWORD) {
-      console.log('Login successful with fixed credentials.');
-      // alert(`Login Successful!\nWelcome, ${email}!`); // Optional: remove alert if redirecting immediately
-      router.push('/admin/dashboard'); // <--- Redirect to dashboard
-    } else {
-      console.log('Login failed: Invalid credentials.');
-      setError('Invalid email or password. Please try again.');
+      if (response.ok) {
+        Cookies.set('isAuthenticated', 'true', { expires: 1 }); // Set cookie for 1 day
+        router.push('/admin/dashboard');
+      } else {
+        setError('Invalid email or password. Please try again.');
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
     }
     
     setLoading(false);
@@ -69,9 +73,6 @@ export default function LoginPage() {
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Access your account dashboard.
-          </p>
-          <p className="mt-1 text-center text-xs text-gray-500">
-            (Test with: {FIXED_EMAIL} / {FIXED_PASSWORD})
           </p>
         </div>
 
