@@ -13,7 +13,7 @@ interface WhatsAppChatProps {
 }
 
 const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
-  phoneNumber = "919876543210", // Replace with actual phone number
+  phoneNumber = "+917827952450", // Default phone number with country code
   defaultMessage = "Hello, I'd like to inquire about physiotherapy services.",
 }) => {
   const [isOpen, setIsOpen] = useState(false)
@@ -35,16 +35,28 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
 
     setIsLoading(true)
 
-    // Simulate loading for demo purposes
-    setTimeout(() => {
-      // Open WhatsApp with the message
-      const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
-      window.open(whatsappUrl, "_blank")
-
+    try {
+      // Format phone number (remove any spaces, dashes, or special characters)
+      const formattedPhone = phoneNumber.replace(/[^0-9]/g, '')
+      
+      // Format message for URL (replace newlines with spaces and encode)
+      const formattedMessage = message
+        .trim()
+        .replace(/\n/g, ' ')
+        .replace(/\s+/g, ' ')
+      
+      // Create WhatsApp URL with formatted phone and message
+      const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(formattedMessage)}`
+      
+      // Open WhatsApp in new tab
+      window.open(whatsappUrl, "_blank", "noopener,noreferrer")
+    } catch (error) {
+      console.error('Error sending WhatsApp message:', error)
+    } finally {
       setIsLoading(false)
       setMessage(defaultMessage)
       setIsOpen(false)
-    }, 1000)
+    }
   }
 
   useEffect(() => {
