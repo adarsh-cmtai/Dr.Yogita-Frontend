@@ -75,7 +75,7 @@ export default function HeroSection() {
             >
               <Link href="/booking">
                 <span className="relative z-10 cursor-pointer">
-                  Book Free Consultation
+                  Book Consultation
                 </span>
               </Link>
               <span className="absolute inset-0 bg-gradient-to-r from-pink-500 to-pink-600 group-hover:scale-105 transition-transform duration-300"></span>
