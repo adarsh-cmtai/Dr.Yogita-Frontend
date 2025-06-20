@@ -1,17 +1,39 @@
 "use client"
 
 import type React from "react"
-
+import { useState, useEffect } from "react"
+import Link from "next/link"
 import { motion } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
 import { Phone, Mail, MapPin, Clock, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export default function ContactInfo() {
-  // Trigger the WhatsApp chat when the contact info button is clicked
+  const [appointmentUrl, setAppointmentUrl] = useState<string>("#");
+  const url = `${process.env.NEXT_PUBLIC_API_URL}/api/settings/appointment_url` || 
+  "http://localhost:5001/api/settings/appointment_url"
+
+  useEffect(() => {
+    const fetchAppointmentUrl = async () => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) {
+          throw new Error('Failed to fetch the URL');
+        }
+        const data = await res.json();
+        if (data.value) {
+          setAppointmentUrl(data.value);
+        }
+      } catch (error) {
+        console.error("Error fetching appointment URL:", error);
+      }
+    };
+
+    fetchAppointmentUrl();
+  }, []);
+
   const handleWhatsAppClick = (e: React.MouseEvent) => {
     e.preventDefault()
-    // Create a custom event to open the WhatsApp chat
     const event = new CustomEvent("openWhatsAppChat")
     document.dispatchEvent(event)
   }
@@ -50,7 +72,7 @@ export default function ContactInfo() {
       details: ["Monday - Saturday: 10AM - 7PM", "Sunday: Closed"],
       action: {
         text: "Book Appointment",
-        href: "#",
+        href: appointmentUrl,
       },
     },
   ]
@@ -95,14 +117,13 @@ export default function ContactInfo() {
                     ))}
                   </div>
                   <div className="mt-auto">
-                    <a href={item.action.href}>
-                      <Button
-                        variant="outline"
-                        className="w-full border-pink-200 text-pink-600 hover:bg-pink-50 transition-colors"
-                      >
-                        {item.action.text}
-                      </Button>
-                    </a>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="w-full border-pink-200 text-pink-600 hover:bg-pink-50 transition-colors"
+                    >
+                      <Link href={item.action.href}>{item.action.text}</Link>
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
