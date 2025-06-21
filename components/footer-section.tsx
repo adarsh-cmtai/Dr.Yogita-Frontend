@@ -103,7 +103,7 @@ export default function FooterSection() {
                 <Linkedin className="h-5 w-5" />
               </Link>
                 <Link
-                href="https://www.youtube.com/in/dr-yogita-kumari-1055b3269/"
+                href="https://youtube.com/@holisticphysiotalks"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-pink-500 transition-colors"
