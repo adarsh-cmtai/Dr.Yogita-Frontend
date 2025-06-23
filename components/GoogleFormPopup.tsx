@@ -1,4 +1,3 @@
-// components/GoogleFormPopup.tsx
 "use client";
 
 import { useState, ChangeEvent, FormEvent, useEffect } from 'react';
@@ -6,17 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
-// ================== IMPORTANT - REPLACE PLACEHOLDERS! ==================
-const GOOGLE_FORM_ACTION_URL = "YOUR_GOOGLE_FORM_ACTION_URL_ENDING_IN_formResponse"; 
-const NAME_FIELD_ID = "entry.YOUR_NAME_FIELD_ID";            
-const EMAIL_FIELD_ID = "entry.YOUR_EMAIL_FIELD_ID";          
-const PHONE_FIELD_ID = "entry.YOUR_PHONE_FIELD_ID";          
-const AGE_FIELD_ID = "entry.YOUR_AGE_FIELD_ID";              
-const GENDER_FIELD_ID = "entry.YOUR_GENDER_FIELD_ID";        
-const CITY_FIELD_ID = "entry.YOUR_CITY_FIELD_ID";            
-const CONSULTATION_MODE_FIELD_ID = "entry.YOUR_CONSULTATION_MODE_FIELD_ID"; 
-const MESSAGE_FIELD_ID = "entry.YOUR_MESSAGE_FIELD_ID";      
-// ========================================================================
+const WEB3FORMS_ACCESS_KEY = "efce88f8-aa11-4456-bbc5-3b73bbd5496e";
 
 interface GoogleFormPopupProps {
   show: boolean;
@@ -29,9 +18,9 @@ interface FormDataState {
 }
 
 const initialFormData: FormDataState = {
-  [NAME_FIELD_ID]: '', [EMAIL_FIELD_ID]: '', [PHONE_FIELD_ID]: '',
-  [AGE_FIELD_ID]: '', [GENDER_FIELD_ID]: '', [CITY_FIELD_ID]: '',
-  [CONSULTATION_MODE_FIELD_ID]: '', [MESSAGE_FIELD_ID]: '',
+  name: '', email: '', phone: '',
+  age: '', gender: '', city: '',
+  consultationMode: '', message: '',
 };
 
 const inputBaseClass = "w-full px-3.5 py-2.5 bg-white/80 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-sm placeholder-gray-500 transition-all duration-200 ease-in-out";
@@ -54,13 +43,12 @@ export default function GoogleFormPopup({ show, onClose, onSubmitted }: GoogleFo
     if (!show) {
       const timer = setTimeout(() => {
         setSubmissionStatus(null);
-      }, 300); // Reset status after the exit animation completes
+      }, 300);
       return () => clearTimeout(timer);
     }
   }, [show]);
 
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -70,21 +58,34 @@ export default function GoogleFormPopup({ show, onClose, onSubmitted }: GoogleFo
     setIsSubmitting(true);
     setSubmissionStatus(null);
 
-    const googleFormData = new FormData();
-    for (const key in formData) {
-      if (formData[key]) { 
-        googleFormData.append(key, formData[key]);
-      }
-    }
+    const payload = {
+      ...formData,
+      access_key: WEB3FORMS_ACCESS_KEY,
+      subject: "New Free Consultation Request",
+      from_name: "Clinic Website"
+    };
     
     try {
-      await fetch(GOOGLE_FORM_ACTION_URL, {
-        method: "POST", body: googleFormData, mode: 'no-cors', 
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        },
+        body: JSON.stringify(payload),
       });
-      setSubmissionStatus('success');
-      onSubmitted(); 
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSubmissionStatus('success');
+        onSubmitted();
+      } else {
+        console.error('Web3Forms Submission Error:', result);
+        setSubmissionStatus('error');
+      }
     } catch (error) {
-      console.error('GoogleFormPopup: Form submission error:', error);
+      console.error('Form submission network error:', error);
       setSubmissionStatus('error');
     } finally {
       setIsSubmitting(false);
@@ -135,7 +136,7 @@ export default function GoogleFormPopup({ show, onClose, onSubmitted }: GoogleFo
                 ) : (
                 <>
                     <div className="text-center mb-6 sm:mb-8">
-                      <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">Book Your Consultation</h2>
+                      <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">Book Your Free Consultation</h2>
                       <p className="text-sm sm:text-base text-gray-600">
                           Take the first step towards better health.
                       </p>
@@ -143,29 +144,29 @@ export default function GoogleFormPopup({ show, onClose, onSubmitted }: GoogleFo
 
                     <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
                       <div>
-                          <label htmlFor={NAME_FIELD_ID} className={labelBaseClass}>Full Name <span className="text-red-500">*</span></label>
-                          <input type="text" name={NAME_FIELD_ID} id={NAME_FIELD_ID} value={formData[NAME_FIELD_ID]} onChange={handleChange} required className={inputBaseClass} placeholder="e.g., Priya Sharma"/>
+                          <label htmlFor="name" className={labelBaseClass}>Full Name <span className="text-red-500">*</span></label>
+                          <input type="text" name="name" id="name" value={formData.name} onChange={handleChange} required className={inputBaseClass} placeholder="e.g., Priya Sharma"/>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                           <div>
-                            <label htmlFor={EMAIL_FIELD_ID} className={labelBaseClass}>Email <span className="text-red-500">*</span></label>
-                            <input type="email" name={EMAIL_FIELD_ID} id={EMAIL_FIELD_ID} value={formData[EMAIL_FIELD_ID]} onChange={handleChange} required className={inputBaseClass} placeholder="you@example.com"/>
+                            <label htmlFor="email" className={labelBaseClass}>Email <span className="text-red-500">*</span></label>
+                            <input type="email" name="email" id="email" value={formData.email} onChange={handleChange} required className={inputBaseClass} placeholder="you@example.com"/>
                           </div>
                           <div>
-                            <label htmlFor={PHONE_FIELD_ID} className={labelBaseClass}>Phone <span className="text-red-500">*</span></label>
-                            <input type="tel" name={PHONE_FIELD_ID} id={PHONE_FIELD_ID} value={formData[PHONE_FIELD_ID]} onChange={handleChange} required pattern="[0-9]{10,15}" title="Please enter a valid 10-15 digit phone number" className={inputBaseClass} placeholder="e.g., 9876543210"/>
+                            <label htmlFor="phone" className={labelBaseClass}>Phone <span className="text-red-500">*</span></label>
+                            <input type="tel" name="phone" id="phone" value={formData.phone} onChange={handleChange} required pattern="[0-9]{10,15}" title="Please enter a valid 10-15 digit phone number" className={inputBaseClass} placeholder="e.g., 9876543210"/>
                           </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                           <div>
-                            <label htmlFor={AGE_FIELD_ID} className={labelBaseClass}>Age <span className="text-red-500">*</span></label>
-                            <input type="number" name={AGE_FIELD_ID} id={AGE_FIELD_ID} value={formData[AGE_FIELD_ID]} onChange={handleChange} required min="1" max="120" className={inputBaseClass} placeholder="Your Age"/>
+                            <label htmlFor="age" className={labelBaseClass}>Age <span className="text-red-500">*</span></label>
+                            <input type="number" name="age" id="age" value={formData.age} onChange={handleChange} required min="1" max="120" className={inputBaseClass} placeholder="Your Age"/>
                           </div>
                           <div>
-                            <label htmlFor={CITY_FIELD_ID} className={labelBaseClass}>City <span className="text-red-500">*</span></label>
-                            <input type="text" name={CITY_FIELD_ID} id={CITY_FIELD_ID} value={formData[CITY_FIELD_ID]} onChange={handleChange} required className={inputBaseClass} placeholder="e.g., Mumbai"/>
+                            <label htmlFor="city" className={labelBaseClass}>City <span className="text-red-500">*</span></label>
+                            <input type="text" name="city" id="city" value={formData.city} onChange={handleChange} required className={inputBaseClass} placeholder="e.g., Mumbai"/>
                           </div>
                       </div>
                       
@@ -174,7 +175,7 @@ export default function GoogleFormPopup({ show, onClose, onSubmitted }: GoogleFo
                           <div className="flex flex-wrap gap-x-6 gap-y-2 mt-2">
                             {['Male', 'Female', 'Other'].map(option => (
                                 <label key={option} className="inline-flex items-center text-sm text-gray-700 cursor-pointer">
-                                  <input type="radio" name={GENDER_FIELD_ID} value={option} checked={formData[GENDER_FIELD_ID] === option} onChange={handleChange} required className="form-radio h-4 w-4 text-pink-600 border-gray-400 focus:ring-pink-500"/>
+                                  <input type="radio" name="gender" value={option} checked={formData.gender === option} onChange={handleChange} required className="form-radio h-4 w-4 text-pink-600 border-gray-400 focus:ring-pink-500"/>
                                   <span className="ml-2">{option}</span>
                                 </label>
                             ))}
@@ -186,7 +187,7 @@ export default function GoogleFormPopup({ show, onClose, onSubmitted }: GoogleFo
                           <div className="flex flex-wrap gap-x-6 gap-y-2 mt-2">
                             {['Online', 'Offline (In-Clinic)'].map(option => (
                                 <label key={option} className="inline-flex items-center text-sm text-gray-700 cursor-pointer">
-                                  <input type="radio" name={CONSULTATION_MODE_FIELD_ID} value={option} checked={formData[CONSULTATION_MODE_FIELD_ID] === option} onChange={handleChange} required className="form-radio h-4 w-4 text-pink-600 border-gray-400 focus:ring-pink-500"/>
+                                  <input type="radio" name="consultationMode" value={option} checked={formData.consultationMode === option} onChange={handleChange} required className="form-radio h-4 w-4 text-pink-600 border-gray-400 focus:ring-pink-500"/>
                                   <span className="ml-2">{option}</span>
                                 </label>
                             ))}
@@ -194,8 +195,8 @@ export default function GoogleFormPopup({ show, onClose, onSubmitted }: GoogleFo
                       </div>
                       
                       <div>
-                          <label htmlFor={MESSAGE_FIELD_ID} className={labelBaseClass}>Your Health Concern <span className="text-red-500">*</span></label>
-                          <textarea name={MESSAGE_FIELD_ID} id={MESSAGE_FIELD_ID} rows={4} value={formData[MESSAGE_FIELD_ID]} onChange={handleChange} required className={`${inputBaseClass} min-h-[100px]`} placeholder="Briefly describe your health concern..."></textarea>
+                          <label htmlFor="message" className={labelBaseClass}>Your Health Concern <span className="text-red-500">*</span></label>
+                          <textarea name="message" id="message" rows={4} value={formData.message} onChange={handleChange} required className={`${inputBaseClass} min-h-[100px]`} placeholder="Briefly describe your health concern..."></textarea>
                       </div>
 
                       {submissionStatus === 'error' && (
