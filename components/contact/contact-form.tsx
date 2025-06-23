@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
@@ -9,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { CheckCircle2, Loader2 } from "lucide-react"
 import Image from "next/image"
 
@@ -17,20 +15,17 @@ export default function ContactForm() {
   const [formState, setFormState] = useState({
     name: "",
     email: "",
-    phone: "",
     subject: "",
     message: "",
-    contactPreference: "email",
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormState((prev) => ({ ...prev, [name]: value }))
-    // Clear error when user types
     if (errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev }
@@ -40,60 +35,59 @@ export default function ContactForm() {
     }
   }
 
-  const handleRadioChange = (value: string) => {
-    setFormState((prev) => ({ ...prev, contactPreference: value }))
-  }
-
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
-
-    if (!formState.name.trim()) {
-      newErrors.name = "Name is required"
-    }
-
+    if (!formState.name.trim()) newErrors.name = "Name is required"
     if (!formState.email.trim()) {
       newErrors.email = "Email is required"
     } else if (!/\S+@\S+\.\S+/.test(formState.email)) {
       newErrors.email = "Email is invalid"
     }
-
-    if (!formState.phone.trim()) {
-      newErrors.phone = "Phone number is required"
-    } else if (!/^\d{10}$/.test(formState.phone.replace(/\D/g, ""))) {
-      newErrors.phone = "Phone number is invalid"
-    }
-
-    if (!formState.message.trim()) {
-      newErrors.message = "Message is required"
-    }
-
+    if (!formState.message.trim()) newErrors.message = "Message is required"
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!validateForm()) {
-      return
-    }
+    if (!validateForm()) return
 
     setIsSubmitting(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false)
-      setIsSubmitted(true)
-      // Reset form
-      setFormState({
-        name: "",
-        email: "",
-        phone: "",
-        subject: "",
-        message: "",
-        contactPreference: "email",
+    const formData = new FormData()
+    formData.append("access_key", "efce88f8-aa11-4456-bbc5-3b73bbd5496e")
+    formData.append("name", formState.name)
+    formData.append("email", formState.email)
+    formData.append("subject", `Contact Form: ${formState.subject}`)
+    formData.append("message", formState.message)
+
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        body: formData,
       })
-    }, 1500)
+
+      const data = await response.json()
+
+      if (data.success) {
+        setIsSubmitted(true)
+        setFormState({
+          name: "",
+          email: "",
+          subject: "",
+          message: "",
+        })
+        setErrors({})
+      } else {
+        console.error("Error from web3forms:", data)
+        alert(data.message || "Failed to send message. Please try again.")
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred."
+      alert(errorMessage)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -126,8 +120,7 @@ export default function ContactForm() {
           >
             <h2 className="text-3xl font-bold text-gray-800 mb-6">Send Us a Message</h2>
             <p className="text-gray-600 mb-8">
-              Have questions or want to schedule an appointment? Fill out the form below and we'll get back to you as
-              soon as possible.
+              Have questions or want to schedule an appointment? Fill out the form below and we'll get back to you as soon as possible.
             </p>
 
             {isSubmitted ? (
@@ -159,33 +152,18 @@ export default function ContactForm() {
                     {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="email">Email Address</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        value={formState.email}
-                        onChange={handleChange}
-                        className={`border-pink-200 focus:border-pink-400 ${errors.email ? "border-red-300" : ""}`}
-                        placeholder="Your email address"
-                      />
-                      {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-                    </div>
-
-                    <div>
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        name="phone"
-                        value={formState.phone}
-                        onChange={handleChange}
-                        className={`border-pink-200 focus:border-pink-400 ${errors.phone ? "border-red-300" : ""}`}
-                        placeholder="Your phone number"
-                      />
-                      {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
-                    </div>
+                  <div>
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={formState.email}
+                      onChange={handleChange}
+                      className={`border-pink-200 focus:border-pink-400 ${errors.email ? "border-red-300" : ""}`}
+                      placeholder="Your email address"
+                    />
+                    {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
                   </div>
 
                   <div>
@@ -207,40 +185,10 @@ export default function ContactForm() {
                       name="message"
                       value={formState.message}
                       onChange={handleChange}
-                      className={`border-pink-200 focus:border-pink-400 min-h-[120px] ${
-                        errors.message ? "border-red-300" : ""
-                      }`}
+                      className={`border-pink-200 focus:border-pink-400 min-h-[120px] ${errors.message ? "border-red-300" : ""}`}
                       placeholder="How can we help you?"
                     />
                     {errors.message && <p className="text-red-500 text-sm mt-1">{errors.message}</p>}
-                  </div>
-
-                  <div>
-                    <Label>Preferred Contact Method</Label>
-                    <RadioGroup
-                      value={formState.contactPreference}
-                      onValueChange={handleRadioChange}
-                      className="flex space-x-4 mt-2"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="email" id="email-preference" />
-                        <Label htmlFor="email-preference" className="cursor-pointer">
-                          Email
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="phone" id="phone-preference" />
-                        <Label htmlFor="phone-preference" className="cursor-pointer">
-                          Phone
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="whatsapp" id="whatsapp-preference" />
-                        <Label htmlFor="whatsapp-preference" className="cursor-pointer">
-                          WhatsApp
-                        </Label>
-                      </div>
-                    </RadioGroup>
                   </div>
 
                   <Button
