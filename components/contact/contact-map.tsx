@@ -34,15 +34,15 @@ export default function ContactMap() {
             <CardContent className="p-0">
               <div className="aspect-video w-full">
                     <iframe
-                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3559.703174198884!2d75.82082397540354!3d26.850441362314955!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x396db4a7a10b4c01%3A0xc6a97f6b76d91b52!2sDr.%20Yogita%20Physiotherapy%20Clinic!5e0!3m2!1sen!2sin!4v1718871200000!5m2!1sen!2sin"
-                      width="100%"
-                      height="500"
-                      style={{ border: 0 }}
-                      allowFullScreen=""
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                      title="Dr. Yogita Physiotherapy Clinic Location"
-                    />
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3559.703174198884!2d75.82082397540354!3d26.850441362314955!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x396db4a7a10b4c01%3A0xc6a97f6b76d91b52!2sDr.%20Yogita%20Physiotherapy%20Clinic!5e0!3m2!1sen!2sin!4v1718871200000!5m2!1sen!2sin"
+                        width="100%"
+                        height="100%"
+                        style={{ border: 0 }}
+                        allowFullScreen=""
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        title="Dr. Yogita Physiotherapy Clinic Location"
+                      />
 
               </div>
             </CardContent>
