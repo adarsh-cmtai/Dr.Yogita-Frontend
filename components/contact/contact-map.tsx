@@ -19,7 +19,7 @@ export default function ContactMap() {
           <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Find Us</h2>
           <div className="w-24 h-1 bg-pink-400 mx-auto mb-6"></div>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Our clinic is conveniently located in Sector 14, Gurgaon, with easy access from major roads and public
+            Our clinic is conveniently located in Sector 31, Gurgaon, with easy access from major roads and public
             transportation.
           </p>
         </motion.div>
