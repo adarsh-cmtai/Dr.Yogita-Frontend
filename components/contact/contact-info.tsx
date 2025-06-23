@@ -54,7 +54,7 @@ export default function ContactInfo() {
       details: ["connect@yogitas.com", "enquiry2physio@gmail.com"],
       action: {
         text: "Send Email",
-        href: "enquiry2physio@gmail.com",
+        href: "mailto:enquiry2physio@gmail.com",
       },
     },
     {
