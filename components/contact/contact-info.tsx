@@ -51,10 +51,10 @@ export default function ContactInfo() {
     {
       icon: <Mail className="h-6 w-6 text-pink-500" />,
       title: "Email",
-      details: ["connect@yogitas.com", "connect@yogitas.com"],
+      details: ["connect@yogitas.com", "enquiry2physio@gmail.com"],
       action: {
         text: "Send Email",
-        href: "mailto:connect@yogitas.com",
+        href: "enquiry2physio@gmail.com",
       },
     },
     {
