@@ -148,7 +148,7 @@ export default function Navbar() {
     { name: "Home", href: "/" },
     { name: "About", href: "/about" },
     { name: "Relief Read", href: "/library" },
-    { name: "Nourishwell", href: "/nutrition" },
+    // { name: "Nourishwell", href: "/nutrition" },
   ];
 
   return (
