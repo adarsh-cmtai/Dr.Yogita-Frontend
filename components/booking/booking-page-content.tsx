@@ -14,9 +14,48 @@ import { Button } from "@/components/ui/button";
 import ContactInfo from "@/components/contact/contact-info";
 import ContactForm from "@/components/contact/contact-form";
 import ContactMap from "@/components/contact/contact-map";
+import { Clock } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import Link from "next/link";
 // import ContactFAQ from "@/components/contact/contact-faq";
 
 export default function BookingPageContent() {
+
+  const [appointmentUrl, setAppointmentUrl] = useState<string>("#");
+  const url = `${process.env.NEXT_PUBLIC_API_URL}/api/settings/appointment_url` ||
+    "http://localhost:5001/api/settings/appointment_url"
+
+  useEffect(() => {
+    const fetchAppointmentUrl = async () => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) {
+          throw new Error('Failed to fetch the URL');
+        }
+        const data = await res.json();
+        if (data.value) {
+          setAppointmentUrl(data.value);
+        }
+      } catch (error) {
+        console.error("Error fetching appointment URL:", error);
+      }
+    };
+
+    fetchAppointmentUrl();
+  }, []);
+
+  const contactDetails = [
+    {
+      icon: <Clock className="h-6 w-6 text-pink-500" />,
+      title: "Working Hours",
+      details: ["Monday - Saturday: 10AM - 7PM", "Sunday: Closed"],
+      action: {
+        text: "Book Appointment",
+        href: appointmentUrl,
+      },
+    },
+  ]
+
   const searchParams = useSearchParams(); // This will now correctly suspend if needed
   const {
     selectedDate,
@@ -72,7 +111,7 @@ export default function BookingPageContent() {
   // for the useSearchParams issue, but it doesn't hurt for other client-only logic
   // that might run before full hydration if you had any.
   if (!isMounted) {
-     return null; // Or your loading spinner if you prefer it here instead of Suspense fallback
+    return null; // Or your loading spinner if you prefer it here instead of Suspense fallback
   }
 
   return (
@@ -87,7 +126,22 @@ export default function BookingPageContent() {
           <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
             Book Your Appointment
           </h1>
+
           <div className="w-24 h-1 bg-pink-400 mx-auto mb-6"></div>
+
+          <div className="flex flex-wrap justify-center gap-4 mb-6">
+            {contactDetails.map((item, index) => (
+              <Button
+                key={index}
+                asChild
+                variant="outline"
+                className="border-pink-200 text-pink-600 hover:bg-pink-50 transition-colors"
+              >
+                <Link href={item.action.href}>{item.action.text}</Link>
+              </Button>
+            ))}
+          </div>
+
           <p className="text-gray-600 max-w-2xl mx-auto">
             Schedule your physiotherapy session with Dr. Yogita. Choose from
             available dates and times for your treatment.
@@ -101,11 +155,10 @@ export default function BookingPageContent() {
               {steps.map((s, i) => (
                 <div key={s.number} className="flex items-center">
                   <div
-                    className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                      step >= s.number
-                        ? "bg-pink-500 text-white"
-                        : "bg-gray-200 text-gray-500"
-                    } transition-colors duration-300`}
+                    className={`flex items-center justify-center w-10 h-10 rounded-full ${step >= s.number
+                      ? "bg-pink-500 text-white"
+                      : "bg-gray-200 text-gray-500"
+                      } transition-colors duration-300`}
                   >
                     {step > s.number ? (
                       <Check className="h-5 w-5" />
@@ -115,22 +168,19 @@ export default function BookingPageContent() {
                   </div>
                   <div className="hidden sm:block ml-3 mr-3 md:mr-6 lg:mr-10">
                     <p
-                      className={`text-sm font-medium ${
-                        step >= s.number
-                          ? "text-gray-800"
-                          : "text-gray-400"
-                      }`}
+                      className={`text-sm font-medium ${step >= s.number
+                        ? "text-gray-800"
+                        : "text-gray-400"
+                        }`}
                     >
                       {s.title}
                     </p>
                   </div>
                   {i < steps.length - 1 && (
                     <div
-                      className={`hidden sm:block w-12 md:w-16 lg:w-20 h-1 ${
-                        step > s.number ? "bg-pink-500" : "bg-gray-200"
-                      } ${
-                        i < steps.length - 1 ? "mr-3 md:mr-6 lg:mr-10" : ""
-                      } transition-colors duration-300`}
+                      className={`hidden sm:block w-12 md:w-16 lg:w-20 h-1 ${step > s.number ? "bg-pink-500" : "bg-gray-200"
+                        } ${i < steps.length - 1 ? "mr-3 md:mr-6 lg:mr-10" : ""
+                        } transition-colors duration-300`}
                     ></div>
                   )}
                 </div>
