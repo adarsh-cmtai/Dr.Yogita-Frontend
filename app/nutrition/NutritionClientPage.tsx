@@ -191,12 +191,12 @@ const NutritionClientPage = () => {
   }, [allNutritionPlans, searchTerm, selectedCategories]);
 
   const handlePayNowClick = (plan: NutritionPlan) => {
-    if (plan.razorpayPaymentLink && plan.razorpayPaymentLink.startsWith('https://pages.razorpay.com/')) {
+    if (plan.razorpayPaymentLink && plan.razorpayPaymentLink.startsWith('https://')) {
       sessionStorage.setItem(SESSION_STORAGE_KEY_PENDING_PURCHASE_NUTRITION_PLAN_ID, plan._id);
-      console.log(`Redirecting to Razorpay for ${plan.title}: ${plan.razorpayPaymentLink}. Stored plan ID: ${plan._id}`);
+      console.log(`Redirecting to payment page for ${plan.title}: ${plan.razorpayPaymentLink}. Stored plan ID: ${plan._id}`);
       window.location.href = plan.razorpayPaymentLink;
     } else {
-      console.error("Razorpay link is missing, invalid, or not a Razorpay Page link for this plan:", plan.title, plan.razorpayPaymentLink);
+      console.error("Payment link is missing, invalid, or not a secure (HTTPS) link for this plan:", plan.title, plan.razorpayPaymentLink);
       openPaymentFailedModal(`The payment link for "${plan.title}" is not configured correctly. Please contact support.`);
     }
   };
