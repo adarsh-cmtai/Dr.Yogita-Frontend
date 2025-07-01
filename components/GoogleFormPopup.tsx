@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
+const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/api` || "http://localhost:5001/api";
 const WEB3FORMS_ACCESS_KEY = "efce88f8-aa11-4456-bbc5-3b73bbd5496e";
 
 interface GoogleFormPopupProps {
@@ -37,7 +38,7 @@ export default function GoogleFormPopup({ show, onClose, onSubmitted }: GoogleFo
       setSubmissionStatus(null);
       setIsSubmitting(false);
     }
-  }, [show]);
+  }, [show, submissionStatus]);
 
   useEffect(() => {
     if (!show) {
@@ -58,30 +59,44 @@ export default function GoogleFormPopup({ show, onClose, onSubmitted }: GoogleFo
     setIsSubmitting(true);
     setSubmissionStatus(null);
 
-    const payload = {
+    // --- Action 1: Prepare request to save to your database ---
+    const saveToDbRequest = fetch(`${API_BASE_URL}/appointments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
+    });
+
+    // --- Action 2: Prepare request to send email via Web3Forms ---
+    const emailPayload = {
       ...formData,
       access_key: WEB3FORMS_ACCESS_KEY,
       subject: "New Free Consultation Request",
       from_name: "Clinic Website"
     };
-    
+    const sendEmailRequest = fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify(emailPayload),
+    });
+
     try {
-      const response = await fetch("https://api.web3forms.com/submit", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        },
-        body: JSON.stringify(payload),
-      });
+      // --- Perform both actions in parallel ---
+      const [databaseResponse, emailResponse] = await Promise.all([
+        saveToDbRequest,
+        sendEmailRequest,
+      ]);
 
-      const result = await response.json();
+      const dbResult = await databaseResponse.json();
+      const emailResult = await emailResponse.json();
 
-      if (result.success) {
+      // --- Check if BOTH actions were successful ---
+      if (dbResult.success && emailResult.success) {
         setSubmissionStatus('success');
         onSubmitted();
       } else {
-        console.error('Web3Forms Submission Error:', result);
+        // If either one fails, log the errors and show an error message
+        console.error('Database Submission Error:', dbResult);
+        console.error('Email Submission Error:', emailResult);
         setSubmissionStatus('error');
       }
     } catch (error) {
@@ -136,7 +151,7 @@ export default function GoogleFormPopup({ show, onClose, onSubmitted }: GoogleFo
                 ) : (
                 <>
                     <div className="text-center mb-6 sm:mb-8">
-                      <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">For More Enquiry</h2>
+                      <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">Book Your Free Consultation</h2>
                       <p className="text-sm sm:text-base text-gray-600">
                           Take the first step towards better health.
                       </p>
@@ -217,7 +232,7 @@ export default function GoogleFormPopup({ show, onClose, onSubmitted }: GoogleFo
                               Submitting...
                           </>
                           ) : (
-                          'Submit'
+                          'Confirm & Book Session'
                           )}
                       </button>
                     </form>
