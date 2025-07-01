@@ -6,13 +6,14 @@ import {
   PlusCircle, Film, Type, FileText, Youtube, Clock, Hash, Image as ImageIcon,
   AlertCircle, CheckCircle, DollarSign, BookOpen, Video, Book, FileUp, Paperclip,
   Leaf, Edit3, Trash2, ListChecks, Edit, Loader2, X, SlidersHorizontal, CalendarDays, Link as LinkIcon,
-  PackageSearch, VideoIcon
+  PackageSearch, VideoIcon, ClipboardList, Download
 } from 'lucide-react';
 import NextImage from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from '@/components/ui/textarea';
 
+// Interface Definitions
 interface PodcastSeriesFormData { _id?: string; title: string; description: string; category?: string; author?: string; coverImage?: string; }
 interface PodcastEpisodeFormData { _id?: string; podcastSeries: string; title: string; description: string; youtubeLink: string; duration: string; episodeNumber: string; publishDate?: string; thumbnail?: string; }
 interface ProgramSeriesFormData { _id?: string; title: string; description: string; category?: string; author?: string; coverImage?: string; }
@@ -20,6 +21,7 @@ interface ProgramItemFormData { _id?: string; programSeries: string; title: stri
 interface EbookFormData { _id?: string; title: string; description: string; price: string; pages: string; category: string; thumbnail?: string; pdfFile?: string; razorpayPaymentLink?: string; }
 interface NutritionPlanFormData { _id?: string; title: string; description: string; price: string; pages?: string; category: string; thumbnail?: string; pdfFile?: string; razorpayPaymentLink?: string; }
 interface BlogFormData { _id?: string; title: string; content: string; excerpt: string; categories: string; author?: string; isFeatured: boolean; status: 'draft' | 'published'; metaTitle?: string; metaDescription?: string; readingTime?: string; coverImage?: string; }
+interface AppointmentListItem { _id: string; name: string; email: string; phone: string; age: number; gender: string; city: string; consultationMode: string; message: string; status: 'New' | 'Contacted' | 'Completed' | 'Cancelled'; createdAt: string; }
 interface ListItem { _id: string; title: string; }
 interface PodcastSeriesListItem extends ListItem { coverImageUrl?: string; description?: string; category?: string; author?: string; }
 interface PodcastEpisodeListItem extends ListItem { thumbnailUrl?: string; episodeNumber?: string; youtubeLink?: string; }
@@ -44,22 +46,14 @@ const SUBMIT_BUTTON_CLASS = "w-full flex justify-center items-center py-3 px-4 b
 
 const getFullImageUrl = (relativePathFromServer?: string): string | undefined => {
   if (!relativePathFromServer) return undefined;
-  if (relativePathFromServer.startsWith('http') || relativePathFromServer.startsWith('blob:')) {
-    return relativePathFromServer;
-  }
+  if (relativePathFromServer.startsWith('http') || relativePathFromServer.startsWith('blob:')) { return relativePathFromServer; }
   const backendBaseUrl = (`${process.env.NEXT_PUBLIC_API_URL}/api` || "http://localhost:5001/api").replace(/\/api$/, '');
   const path = relativePathFromServer.startsWith('/') ? relativePathFromServer : `/${relativePathFromServer}`;
-  try {
-    return new URL(path, backendBaseUrl).toString();
-  } catch (e) {
-    console.error("Error constructing full image URL:", e);
-    return undefined;
-  }
+  try { return new URL(path, backendBaseUrl).toString(); } catch (e) { console.error("Error constructing full image URL:", e); return undefined; }
 };
 
 export default function AdminDashboardPage() {
-  const [activeSection, setActiveSection] = useState<'podcastSeries' | 'programSeries' | 'ebook' | 'nutrition' | 'blog' | 'settings'>('podcastSeries');
-
+  const [activeSection, setActiveSection] = useState<'podcastSeries' | 'programSeries' | 'ebook' | 'nutrition' | 'blog' | 'appointments' | 'settings'>('podcastSeries');
   const [podcastSeriesFormData, setPodcastSeriesFormData] = useState<PodcastSeriesFormData>({ title: '', description: '', category: '', author: '', coverImage: '' });
   const [podcastEpisodeFormData, setPodcastEpisodeFormData] = useState<PodcastEpisodeFormData>({ podcastSeries: '', title: '', description: '', youtubeLink: '', duration: '', episodeNumber: '', publishDate: new Date().toISOString().split('T')[0], thumbnail: '' });
   const [isEditingPodcastSeries, setIsEditingPodcastSeries] = useState(false);
@@ -123,6 +117,7 @@ export default function AdminDashboardPage() {
   const [blogCategories, setBlogCategories] = useState<string[]>([]);
   const blogCoverImageRef = useRef<HTMLInputElement | null>(null);
   const [settingsFormData, setSettingsFormData] = useState<{ key: string; value: string }>({ key: 'appointment_url', value: '' });
+  const [appointments, setAppointments] = useState<AppointmentListItem[]>([]);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -147,8 +142,7 @@ export default function AdminDashboardPage() {
   };
 
   const createSpecificFileHandler = ( fileStateKey: string, setFile: React.Dispatch<React.SetStateAction<File | null>>, setPreviewOrFilename: React.Dispatch<React.SetStateAction<string | null>>, inputRef: React.RefObject<HTMLInputElement | null>, maxSizeMB: number, allowedTypes: string[], fileTypeLabel: string, isFilePdfOrVideo: boolean = false, modalContextFor: 'none' | 'podcastEpisode' | 'programItem' = 'none' ) => (e: ChangeEvent<HTMLInputElement>) => {
-    let errorSetter = setError;
-    let successSetter = setSuccess;
+    let errorSetter = setError; let successSetter = setSuccess;
     if (modalContextFor === 'podcastEpisode') { errorSetter = setEpisodeModalError; successSetter = setEpisodeModalSuccess; }
     else if (modalContextFor === 'programItem') { errorSetter = setProgramItemModalError; successSetter = setProgramItemModalSuccess; }
     errorSetter(null); successSetter(null);
@@ -221,7 +215,6 @@ export default function AdminDashboardPage() {
   const handleEbookSubmit = (e: FormEvent<HTMLFormElement>) => { e.preventDefault(); if (!ebookFormData.title || (!isEditingEbook && !ebookThumbnailFile) || (!isEditingEbook && !ebookPdfFile) ) { setError('Ebook Title, Thumbnail & PDF required for new entries.'); return; } const fd = new FormData(); Object.entries(ebookFormData).forEach(([key, value]) => { if (key === 'thumbnail' && isEditingEbook && !ebookThumbnailFile && value) { fd.append('thumbnailUrl', value as string); return; } if (key === 'pdfFile' && isEditingEbook && !ebookPdfFile && value) { fd.append('pdfFileUrl', value as string); return; } if (key !== 'thumbnail' && key !== 'pdfFile') fd.append(key, (value as string) || ''); }); if (ebookThumbnailFile) fd.append('thumbnailFile', ebookThumbnailFile); if (ebookPdfFile) fd.append('pdfFileNew', ebookPdfFile); const endpoint = isEditingEbook && ebookFormData._id ? `/ebooks/${ebookFormData._id}` : '/ebooks'; handleSubmitApi(endpoint, isEditingEbook ? 'PUT' : 'POST', fd, 'ebook', isEditingEbook ? 'E-book updated!' : 'E-book added!'); };
   const handleNutritionPlanSubmit = (e: FormEvent<HTMLFormElement>) => { e.preventDefault(); if (!nutritionPlanFormData.title || !nutritionPlanFormData.description || !nutritionPlanFormData.price || !nutritionPlanFormData.category || (!isEditingNutrition && !nutritionThumbnailFile) || (!isEditingNutrition && !nutritionPdfFile) ) { setError('Nutrition: Title, Desc, Price, Category, Thumbnail & PDF required for new entries.'); return; } const fd = new FormData(); Object.entries(nutritionPlanFormData).forEach(([key, value]) => { if (key === 'thumbnail' && isEditingNutrition && !nutritionThumbnailFile && value) { fd.append('thumbnailUrl', value as string); return; } if (key === 'pdfFile' && isEditingNutrition && !nutritionPdfFile && value) { fd.append('pdfFileUrl', value as string); return; } if (key !== 'thumbnail' && key !== 'pdfFile') fd.append(key, (value as string) || ''); }); if (nutritionThumbnailFile) fd.append('thumbnailFile', nutritionThumbnailFile); if (nutritionPdfFile) fd.append('pdfFileNew', nutritionPdfFile); const endpoint = isEditingNutrition && nutritionPlanFormData._id ? `/nutrition-plans/${nutritionPlanFormData._id}` : '/nutrition-plans'; handleSubmitApi(endpoint, isEditingNutrition ? 'PUT' : 'POST', fd, 'nutrition', isEditingNutrition ? 'Nutrition Plan updated!' : 'Nutrition Plan added!'); };
   const handleBlogPostSubmit = (e: FormEvent<HTMLFormElement>) => { e.preventDefault(); if (!blogFormData.title || !blogFormData.content || !blogFormData.excerpt || !blogFormData.categories || (!isEditingBlog && !blogCoverImageFile)) { setError('Blog: Title, Content, Excerpt, Categories required. Cover Image for new posts.'); return; } const fd = new FormData(); Object.entries(blogFormData).forEach(([key, value]) => { if (key === 'coverImage' && isEditingBlog && !blogCoverImageFile && value) { fd.append('coverImageUrl', value as string); return;} if (key !== 'coverImage') { if (typeof value === 'boolean') fd.append(key, String(value)); else fd.append(key, (value as string) || ''); } }); if (blogCoverImageFile) fd.append('coverImageFile', blogCoverImageFile); const endpoint = isEditingBlog && blogFormData._id ? `/blogs/${blogFormData._id}` : '/blogs'; handleSubmitApi(endpoint, isEditingBlog ? 'PUT' : 'POST', fd, 'blog', isEditingBlog ? 'Blog post updated!' : 'Blog post added!'); };
-
   const handleSettingsSubmit = async (e: FormEvent<HTMLFormElement>) => { e.preventDefault(); setLoading(true); setError(null); setSuccess(null); try { const response = await fetch(`${API_BASE_URL}/settings`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settingsFormData), }); const result = await response.json(); if (!response.ok || !result.setting) { throw new Error(result.message || "Failed to save setting."); } setSuccess("Setting saved successfully!"); setSettingsFormData(prev => ({...prev, value: result.setting.value})); } catch (err: any) { setError(err.message); } finally { setLoading(false); setTimeout(() => { setSuccess(null); setError(null); }, 4000); } };
 
   const fetchPodcastSeries = useCallback(async () => { setIsLoadingItems(true); setListError(null); try { const response = await fetch(`${API_BASE_URL}/podcast-series?limit=100&sortBy=createdAt&order=desc`); if (!response.ok) throw new Error(`Failed to fetch podcast series`); const result = await response.json(); if (result.success) { setPodcastSeriesList(result.data ); } else { throw new Error(result.message || result.error || `Error fetching podcast series`); } } catch (err: any) { console.error(`Error fetching podcast series:`, err); setListError(err.message); } finally { setIsLoadingItems(false); } }, []);
@@ -232,6 +225,7 @@ export default function AdminDashboardPage() {
   const fetchBlogPosts = useCallback(async () => { setIsLoadingItems(true); setListError(null); try { const response = await fetch(`${API_BASE_URL}/blogs?limit=100&sortBy=createdAt&order=desc&status=all`); if (!response.ok) throw new Error("Failed to fetch blog posts"); const data = await response.json(); if (data.success) setBlogPosts(data.data); else throw new Error(data.error || "Error fetching blogs"); } catch (err: any) { console.error(err); setListError(err.message); } finally { setIsLoadingItems(false); } }, []);
   const fetchBlogCategories = useCallback(async () => { try { const response = await fetch(`${API_BASE_URL}/blogs/categories`); if (!response.ok) throw new Error("Failed to fetch blog categories"); const data = await response.json(); if (data.success) setBlogCategories(data.data); } catch (err:any) { console.error("Error fetching blog categories", err); } }, []);
   const fetchSettings = useCallback(async () => { setLoading(true); setError(null); try { const response = await fetch(`${API_BASE_URL}/settings/appointment_url`); if (response.ok) { const result = await response.json(); if (result.value) { setSettingsFormData({ key: 'appointment_url', value: result.value }); } } } catch (err: any) { console.error("Could not fetch settings", err); setError("Could not fetch settings. Backend might be down."); } finally { setLoading(false); } }, []);
+  const fetchAppointments = useCallback(async () => { setIsLoadingItems(true); setListError(null); try { const response = await fetch(`${API_BASE_URL}/appointments`); if (!response.ok) throw new Error("Failed to fetch appointments"); const result = await response.json(); if (result.success) { setAppointments(result.data); } else { throw new Error(result.error || "Error fetching appointments"); } } catch (err: any) { console.error(err); setListError(err.message); } finally { setIsLoadingItems(false); } }, []);
 
   useEffect(() => {
     if (activeSection === 'podcastSeries') fetchPodcastSeries();
@@ -239,8 +233,9 @@ export default function AdminDashboardPage() {
     else if (activeSection === 'ebook') fetchItems('ebooks', setEbooks, '/ebooks');
     else if (activeSection === 'nutrition') fetchItems('nutrition-plans', setNutritionPlans, '/nutrition-plans');
     else if (activeSection === 'blog') { fetchBlogPosts(); fetchBlogCategories(); }
+    else if (activeSection === 'appointments') { fetchAppointments(); }
     else if (activeSection === 'settings') { fetchSettings(); }
-  }, [activeSection, fetchItems, fetchPodcastSeries, fetchProgramSeries, fetchBlogPosts, fetchBlogCategories, fetchSettings]);
+  }, [activeSection, fetchItems, fetchPodcastSeries, fetchProgramSeries, fetchBlogPosts, fetchBlogCategories, fetchSettings, fetchAppointments]);
 
   const handleEditPodcastSeries = async (series: PodcastSeriesListItem) => { const response = await fetch(`${API_BASE_URL}/podcast-series/id/${series._id}`); if (!response.ok) { setError(`Failed to fetch series details: ${series.title}`); return; } const result = await response.json(); if (result.success) { const fullSeries = result.data; setPodcastSeriesFormData({ _id: fullSeries._id, title: fullSeries.title, description: fullSeries.description, category: fullSeries.category || '', author: fullSeries.author || '', coverImage: fullSeries.coverImageUrl || '', }); setPodcastSeriesCoverPreview(getFullImageUrl(fullSeries.coverImageUrl) || null); setPodcastSeriesCoverFile(null); setIsEditingPodcastSeries(true); document.getElementById('podcastSeries-form-section')?.scrollIntoView({ behavior: "smooth" }); } else { setError(result.error || 'Could not load series data for editing.'); } };
   const handleEditPodcastEpisode = async (episode: PodcastEpisodeListItem) => { const response = await fetch(`${API_BASE_URL}/podcast-episodes/${episode._id}`); if (!response.ok) { setEpisodeModalError(`Failed to fetch episode details: ${episode.title}`); return; } const result = await response.json(); if (result.success) { const fullEpisode = result.data; setPodcastEpisodeFormData({ _id: fullEpisode._id, podcastSeries: fullEpisode.podcastSeries?._id || fullEpisode.podcastSeries, title: fullEpisode.title, description: fullEpisode.description, youtubeLink: fullEpisode.youtubeLink, duration: fullEpisode.duration, episodeNumber: String(fullEpisode.episodeNumber || ''), publishDate: fullEpisode.publishDate ? new Date(fullEpisode.publishDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0], thumbnail: fullEpisode.thumbnailUrl || '', }); setPodcastEpisodeThumbnailPreview(getFullImageUrl(fullEpisode.thumbnailUrl) || null); setPodcastEpisodeThumbnailFile(null); setIsEditingPodcastEpisode(true); } else { setEpisodeModalError(result.error || 'Could not load episode data for editing.'); } };
@@ -252,8 +247,81 @@ export default function AdminDashboardPage() {
   const handleDeleteProgramSeries = async (seriesId: string) => { if (!window.confirm(`Are you sure you want to delete this Program Series and ALL its associated programs? This action cannot be undone.`)) return; setLoading(true); setError(null); setSuccess(null); try { const response = await fetch(`${API_BASE_URL}/program-series/${seriesId}`, { method: 'DELETE' }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.error || result.message || `Failed to delete Program Series`); setSuccess(`Program Series deleted successfully!`); fetchProgramSeries(); } catch (err: any) { setError(err.message); } finally { setLoading(false); setTimeout(() => { setSuccess(null); setError(null); }, 3000); } };
   const handleDeleteProgramItem = async (itemId: string) => { if (!window.confirm(`Are you sure you want to delete this Program Item?`)) return; setProgramItemLoading(true); setProgramItemModalError(null); setProgramItemModalSuccess(null); try { const response = await fetch(`${API_BASE_URL}/programs/${itemId}`, { method: 'DELETE' }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.error || result.message || `Failed to delete Program Item`); setProgramItemModalSuccess(`Program Item deleted successfully!`); if (currentManagingProgramSeries) fetchProgramItemsForSeries(currentManagingProgramSeries._id); } catch (err: any) { setProgramItemModalError(err.message); } finally { setProgramItemLoading(false); setTimeout(() => { setProgramItemModalSuccess(null); setProgramItemModalError(null); }, 3000); } };
   const handleDeleteItem = async (itemId: string, itemType: string, endpoint: string, fetchListFunction: () => void) => { if (!window.confirm(`Are you sure you want to delete this ${itemType}?`)) return; setLoading(true); setError(null); setSuccess(null); try { const response = await fetch(`${API_BASE_URL}${endpoint}/${itemId}`, { method: 'DELETE' }); const result = await response.json(); if (!response.ok && !(result.success || result.message === `${itemType.charAt(0).toUpperCase() + itemType.slice(1)} removed` || result.message === `${itemType.charAt(0).toUpperCase() + itemType.slice(1)} removed successfully`)) { throw new Error(result.error || result.message || `Failed to delete ${itemType}`); } setSuccess(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} deleted successfully!`); fetchListFunction(); } catch (err: any) { setError(err.message); } finally { setLoading(false); setTimeout(() => { setSuccess(null); setError(null); }, 3000); } };
+
+  const handleUpdateAppointmentStatus = async (id: string, status: string) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error || 'Failed to update status');
+      setSuccess('Status updated successfully!');
+      fetchAppointments();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+      setTimeout(() => { setSuccess(null); setError(null); }, 3000);
+    }
+  };
+
+  const handleDeleteAppointment = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this appointment?")) return;
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/appointments/${id}`, { method: 'DELETE' });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error || 'Failed to delete appointment');
+      setSuccess('Appointment deleted successfully!');
+      fetchAppointments();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+      setTimeout(() => { setSuccess(null); setError(null); }, 3000);
+    }
+  };
+
+  const downloadAppointmentsAsCSV = (data: AppointmentListItem[]) => {
+    const headers = ['Date', 'Name', 'Email', 'Phone', 'Age', 'Gender', 'City', 'Consultation Mode', 'Status', 'Message'];
+    const csvRows = [headers.join(',')];
+
+    for (const item of data) {
+        const values = [
+            new Date(item.createdAt).toLocaleString(),
+            `"${item.name.replace(/"/g, '""')}"`,
+            `"${item.email.replace(/"/g, '""')}"`,
+            `'${item.phone}`,
+            item.age,
+            item.gender,
+            `"${item.city.replace(/"/g, '""')}"`,
+            item.consultationMode,
+            item.status,
+            `"${item.message.replace(/"/g, '""').replace(/\n/g, ' ')}"`,
+        ];
+        csvRows.push(values.join(','));
+    }
+
+    const csvString = csvRows.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'appointments.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleAddNew = (section: 'podcastSeries' | 'podcastEpisode' | 'programSeries' | 'programItem' | 'ebook' | 'nutrition' | 'blog') => { resetForm(section); };
-  const switchSection = (section: 'podcastSeries' | 'programSeries' | 'ebook' | 'nutrition' | 'blog' | 'settings') => { setActiveSection(section); const resetIfNeeded = (currentSection: string, editingFlag: boolean, formType: any) => { if (section !== currentSection && editingFlag) resetForm(formType); else if (section === currentSection && !editingFlag) resetForm(formType); }; resetIfNeeded('podcastSeries', isEditingPodcastSeries, 'podcastSeries'); resetIfNeeded('programSeries', isEditingProgramSeries, 'programSeries'); resetIfNeeded('ebook', isEditingEbook, 'ebook'); resetIfNeeded('nutrition', isEditingNutrition, 'nutrition'); resetIfNeeded('blog', isEditingBlog, 'blog'); setError(null); setSuccess(null); };
+  const switchSection = (section: 'podcastSeries' | 'programSeries' | 'ebook' | 'nutrition' | 'blog' | 'appointments' | 'settings') => { setActiveSection(section); const resetIfNeeded = (currentSection: string, editingFlag: boolean, formType: any) => { if (section !== currentSection && editingFlag) resetForm(formType); else if (section === currentSection && !editingFlag) resetForm(formType); }; resetIfNeeded('podcastSeries', isEditingPodcastSeries, 'podcastSeries'); resetIfNeeded('programSeries', isEditingProgramSeries, 'programSeries'); resetIfNeeded('ebook', isEditingEbook, 'ebook'); resetIfNeeded('nutrition', isEditingNutrition, 'nutrition'); resetIfNeeded('blog', isEditingBlog, 'blog'); setError(null); setSuccess(null); };
   const openEpisodeModal = (series: PodcastSeriesListItem) => { setCurrentManagingSeries(series); setPodcastEpisodeList([]); fetchPodcastEpisodesForSeries(series._id); resetForm('podcastEpisode'); setIsEpisodeModalOpen(true); };
   const openProgramItemModal = (series: ProgramSeriesListItem) => { setCurrentManagingProgramSeries(series); setProgramItemList([]); fetchProgramItemsForSeries(series._id); resetForm('programItem'); setIsProgramItemModalOpen(true); };
 
@@ -262,20 +330,21 @@ export default function AdminDashboardPage() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-gray-100 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <header className="mb-10 text-center mt-12"><h1 className="text-4xl font-bold tracking-tight text-pink-700">Admin Dashboard</h1><p className="mt-2 text-lg text-gray-600">Content Management</p></header>
+      <div className="max-w-7xl mx-auto">
+        <header className="mb-10 text-center mt-12"><h1 className="text-4xl font-bold tracking-tight text-pink-700">Admin Dashboard</h1><p className="mt-2 text-lg text-gray-600">Content & Operations Management</p></header>
         <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-8">
             <Button onClick={() => switchSection('podcastSeries')} className={activeSection === 'podcastSeries' ? ACTIVE_TAB_BUTTON : INACTIVE_TAB_BUTTON}><Film className="inline h-4 w-4 mr-1 mb-0.5" /> Podcasts</Button>
             <Button onClick={() => switchSection('programSeries')} className={activeSection === 'programSeries' ? ACTIVE_TAB_BUTTON : INACTIVE_TAB_BUTTON}><PackageSearch className="inline h-4 w-4 mr-1 mb-0.5" /> Programs</Button>
             <Button onClick={() => switchSection('ebook')} className={activeSection === 'ebook' ? ACTIVE_TAB_BUTTON : INACTIVE_TAB_BUTTON}><Book className="inline h-4 w-4 mr-1 mb-0.5" /> E-Books</Button>
             <Button onClick={() => switchSection('nutrition')} className={activeSection === 'nutrition' ? ACTIVE_TAB_BUTTON : INACTIVE_TAB_BUTTON}><Leaf className="inline h-4 w-4 mr-1 mb-0.5" /> Nutrition</Button>
             <Button onClick={() => switchSection('blog')} className={activeSection === 'blog' ? ACTIVE_TAB_BUTTON : INACTIVE_TAB_BUTTON}><Edit3 className="inline h-4 w-4 mr-1 mb-0.5" /> Blog</Button>
+            <Button onClick={() => switchSection('appointments')} className={activeSection === 'appointments' ? ACTIVE_TAB_BUTTON : INACTIVE_TAB_BUTTON}><ClipboardList className="inline h-4 w-4 mr-1 mb-0.5" /> Appointments</Button>
             <Button onClick={() => switchSection('settings')} className={activeSection === 'settings' ? ACTIVE_TAB_BUTTON : INACTIVE_TAB_BUTTON}><SlidersHorizontal className="inline h-4 w-4 mr-1 mb-0.5" /> App Settings</Button>
         </div>
         {success && <div className="mb-4 p-3 rounded-md bg-green-50 text-green-700 flex items-center"><CheckCircle className="h-5 w-5 mr-2"/> {success}</div>}
         {error && <div className="mb-4 p-3 rounded-md bg-red-50 text-red-700 flex items-center"><AlertCircle className="h-5 w-5 mr-2"/> {error}</div>}
 
-        {activeSection === 'podcastSeries' && ( <motion.section id="podcastSeries-form-section" key="podcastSeries-form" className="bg-white p-6 sm:p-8 shadow-xl rounded-lg">
+        {activeSection === 'podcastSeries' && ( <motion.div className="max-w-4xl mx-auto"><motion.section id="podcastSeries-form-section" key="podcastSeries-form" className="bg-white p-6 sm:p-8 shadow-xl rounded-lg">
             <div className="flex items-center justify-between mb-6"> <div className="flex items-center"><PlusCircle className="h-8 w-8 text-pink-600 mr-3" /><h2 className="text-2xl font-semibold text-gray-800">{isEditingPodcastSeries ? 'Edit Podcast Series' : 'Add Podcast Series'}</h2></div> {isEditingPodcastSeries && (<Button variant="outline" size="sm" onClick={()=>handleAddNew('podcastSeries')}><PlusCircle className="h-4 w-4 mr-2" /> Add New Series</Button>)} </div>
             <form onSubmit={handlePodcastSeriesSubmit} className="space-y-6">
                 <div><label htmlFor="title-podcastSeries" className={LABEL_CLASS}>Series Title <span className="text-red-500">*</span></label><div className="relative"><Type className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="text" name="title" id="title-podcastSeries" value={podcastSeriesFormData.title} onChange={(e) => handleInputChange(e, 'podcastSeries')} required className={INPUT_CLASS}/></div></div>
@@ -288,9 +357,9 @@ export default function AdminDashboardPage() {
                 <div className="pt-2"><Button type="submit" disabled={loading} className={SUBMIT_BUTTON_CLASS}> {loading ? <Loader2 className="animate-spin mr-2 h-5 w-5"/> : <PlusCircle className="h-5 w-5 mr-2" />}{isEditingPodcastSeries ? 'Update Series' : 'Add Series'} </Button></div>
             </form>
             {renderItemList<PodcastSeriesListItem>(podcastSeriesList, 'podcastSeries', (item) => handleEditPodcastSeries(item), (id) => handleDeletePodcastSeries(id), () => fetchPodcastSeries(), (item) => ( <Button variant="ghost" size="sm" onClick={() => openEpisodeModal(item)} className="text-purple-600 hover:bg-purple-50"> <SlidersHorizontal className="h-4 w-4 mr-1"/> Manage Episodes </Button> ) )}
-        </motion.section> )}
+        </motion.section></motion.div> )}
 
-        {activeSection === 'programSeries' && ( <motion.section id="programSeries-form-section" key="programSeries-form" className="bg-white p-6 sm:p-8 shadow-xl rounded-lg">
+        {activeSection === 'programSeries' && ( <motion.div className="max-w-4xl mx-auto"><motion.section id="programSeries-form-section" key="programSeries-form" className="bg-white p-6 sm:p-8 shadow-xl rounded-lg">
             <div className="flex items-center justify-between mb-6"> <div className="flex items-center"><PackageSearch className="h-8 w-8 text-pink-600 mr-3" /><h2 className="text-2xl font-semibold text-gray-800">{isEditingProgramSeries ? 'Edit Program Series' : 'Add Program Series'}</h2></div> {isEditingProgramSeries && (<Button variant="outline" size="sm" onClick={()=>handleAddNew('programSeries')}><PlusCircle className="h-4 w-4 mr-2" /> Add New Series</Button>)} </div>
             <form onSubmit={handleProgramSeriesSubmit} className="space-y-6">
                 <div><label htmlFor="title-programSeries" className={LABEL_CLASS}>Series Title <span className="text-red-500">*</span></label><div className="relative"><Type className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="text" name="title" id="title-programSeries" value={programSeriesFormData.title} onChange={(e) => handleInputChange(e, 'programSeries')} required className={INPUT_CLASS}/></div></div>
@@ -303,9 +372,9 @@ export default function AdminDashboardPage() {
                 <div className="pt-2"><Button type="submit" disabled={loading} className={SUBMIT_BUTTON_CLASS}> {loading ? <Loader2 className="animate-spin mr-2 h-5 w-5"/> : <PlusCircle className="h-5 w-5 mr-2" />}{isEditingProgramSeries ? 'Update Series' : 'Add Series'} </Button></div>
             </form>
             {renderItemList<ProgramSeriesListItem>(programSeriesList, 'programSeries', (item) => handleEditProgramSeries(item), (id) => handleDeleteProgramSeries(id), () => fetchProgramSeries(), (item) => ( <Button variant="ghost" size="sm" onClick={() => openProgramItemModal(item)} className="text-green-600 hover:bg-green-50"> <Video className="h-4 w-4 mr-1"/> Manage Programs </Button> ) )}
-        </motion.section> )}
+        </motion.section></motion.div> )}
 
-        {activeSection === 'ebook' && ( <motion.section id="ebook-form-section" key="ebook-form" className="bg-white p-6 sm:p-8 shadow-xl rounded-lg">
+        {activeSection === 'ebook' && ( <motion.div className="max-w-4xl mx-auto"><motion.section id="ebook-form-section" key="ebook-form" className="bg-white p-6 sm:p-8 shadow-xl rounded-lg">
             <div className="flex items-center justify-between mb-6"> <div className="flex items-center"><Book className="h-8 w-8 text-pink-600 mr-3" /><h2 className="text-2xl font-semibold text-gray-800">{isEditingEbook ? 'Edit E-Book' : 'Add New E-Book'}</h2></div> {isEditingEbook && (<Button variant="outline" size="sm" onClick={()=>handleAddNew('ebook')}><PlusCircle className="h-4 w-4 mr-2" /> Add New</Button>)} </div>
             <form onSubmit={handleEbookSubmit} className="space-y-6">
                 <div><label htmlFor="title-ebook" className={LABEL_CLASS}>Title <span className="text-red-500">*</span></label><div className="relative"><BookOpen className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="text" name="title" id="title-ebook" value={ebookFormData.title} onChange={(e)=>handleInputChange(e, 'ebook')} required className={INPUT_CLASS}/></div></div>
@@ -321,9 +390,9 @@ export default function AdminDashboardPage() {
                 <div className="pt-2"><Button type="submit" disabled={loading} className={SUBMIT_BUTTON_CLASS}> {loading ? <Loader2 className="animate-spin mr-2 h-5 w-5"/> : <PlusCircle className="h-5 w-5 mr-2" />}{isEditingEbook ? 'Update E-Book' : 'Add E-Book'} </Button></div>
             </form>
              {renderItemList<EbookListItem>(ebooks, 'e-book', (item) => handleEditItem(item as AllListItems, 'ebook'), (id) => handleDeleteItem(id, 'e-book', '/ebooks', () => fetchItems('ebooks', setEbooks, '/ebooks')), () => fetchItems('ebooks', setEbooks, '/ebooks'))}
-        </motion.section> )}
+        </motion.section></motion.div> )}
 
-        {activeSection === 'nutrition' && ( <motion.section id="nutrition-form-section" key="nutrition-form" className="bg-white p-6 sm:p-8 shadow-xl rounded-lg">
+        {activeSection === 'nutrition' && ( <motion.div className="max-w-4xl mx-auto"><motion.section id="nutrition-form-section" key="nutrition-form" className="bg-white p-6 sm:p-8 shadow-xl rounded-lg">
             <div className="flex items-center justify-between mb-6"> <div className="flex items-center"><Leaf className="h-8 w-8 text-pink-600 mr-3" /><h2 className="text-2xl font-semibold text-gray-800">{isEditingNutrition ? 'Edit Nutrition Plan' : 'Add Nutrition Plan'}</h2></div> {isEditingNutrition && (<Button variant="outline" size="sm" onClick={()=>handleAddNew('nutrition')}><PlusCircle className="h-4 w-4 mr-2" /> Add New</Button>)} </div>
             <form onSubmit={handleNutritionPlanSubmit} className="space-y-6">
                 <div><label htmlFor="title-nutrition" className={LABEL_CLASS}>Title <span className="text-red-500">*</span></label><div className="relative"><Type className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="text" name="title" id="title-nutrition" value={nutritionPlanFormData.title} onChange={(e)=>handleInputChange(e, 'nutrition')} required className={INPUT_CLASS}/></div></div>
@@ -339,9 +408,9 @@ export default function AdminDashboardPage() {
                 <div className="pt-2"><Button type="submit" disabled={loading} className={SUBMIT_BUTTON_CLASS}> {loading ? <Loader2 className="animate-spin mr-2 h-5 w-5"/> : <PlusCircle className="h-5 w-5 mr-2" />}{isEditingNutrition ? 'Update Nutrition Plan':'Add Nutrition Plan'} </Button></div>
             </form>
              {renderItemList<NutritionPlanListItem>(nutritionPlans, 'nutrition-plan', (item) => handleEditItem(item as AllListItems, 'nutrition'), (id) => handleDeleteItem(id, 'nutrition plan', '/nutrition-plans', () => fetchItems('nutrition-plans', setNutritionPlans, '/nutrition-plans')), () => fetchItems('nutrition-plans', setNutritionPlans, '/nutrition-plans'))}
-        </motion.section> )}
+        </motion.section></motion.div> )}
 
-        {activeSection === 'blog' && ( <motion.section id="blog-form-section" key="blog-form" className="bg-white p-6 sm:p-8 shadow-xl rounded-lg">
+        {activeSection === 'blog' && ( <motion.div className="max-w-4xl mx-auto"><motion.section id="blog-form-section" key="blog-form" className="bg-white p-6 sm:p-8 shadow-xl rounded-lg">
             <div className="flex items-center justify-between mb-6"><div className="flex items-center"><Edit3 className="h-8 w-8 text-pink-600 mr-3" /><h2 className="text-2xl font-semibold text-gray-800">{isEditingBlog ? 'Edit Blog Post' : 'Add New Blog Post'}</h2></div>{isEditingBlog && (<Button variant="outline" size="sm" onClick={()=>handleAddNew('blog')}><PlusCircle className="h-4 w-4 mr-2" /> Add New</Button>)}</div>
             <form onSubmit={handleBlogPostSubmit} className="space-y-6">
                 <div><label htmlFor="title-blog" className={LABEL_CLASS}>Title <span className="text-red-500">*</span></label><div className="relative"><Type className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="text" name="title" id="title-blog" value={blogFormData.title} onChange={(e)=>handleInputChange(e, 'blog')} required className={INPUT_CLASS} /></div></div>
@@ -361,10 +430,86 @@ export default function AdminDashboardPage() {
                 <div className="pt-2"><Button type="submit" disabled={loading} className={SUBMIT_BUTTON_CLASS}> {loading ? <Loader2 className="animate-spin mr-2 h-5 w-5"/> : <PlusCircle className="h-5 w-5 mr-2" />}{isEditingBlog ? 'Update Post' : 'Add Blog Post'} </Button></div>
             </form>
             <div className="mt-12 pt-6 border-t border-gray-200"> <div className="flex justify-between items-center mb-4"><h3 className="text-xl font-semibold text-gray-800">Manage Existing Blog Posts</h3><Button variant="outline" size="sm" onClick={fetchBlogPosts} disabled={isLoadingItems}>{isLoadingItems ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : <ListChecks className="h-4 w-4 mr-2" />}Refresh List</Button></div> {isLoadingItems && <div className="flex justify-center py-4"><Loader2 className="h-8 w-8 animate-spin text-pink-500"/></div>} {listError && activeSection === 'blog' && <p className="text-red-500 bg-red-50 p-3 rounded-md">{listError}</p>} {!isLoadingItems && !listError && blogPosts.length === 0 && activeSection === 'blog' && <p className="text-gray-500">No blog posts found.</p>} {!isLoadingItems && !listError && blogPosts.length > 0 && activeSection === 'blog' && (<ul className="space-y-3">{blogPosts.map(post => { const coverImgUrl = getFullImageUrl(post.coverImage?.url); return (<li key={post._id} className="p-4 bg-white border border-gray-200 rounded-md shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center"> <div className="flex items-center mb-2 sm:mb-0 flex-grow min-w-0"> {coverImgUrl && <NextImage src={coverImgUrl} alt={post.title} width={60} height={40} className="rounded object-cover mr-3 flex-shrink-0" unoptimized={true} />} <div className='min-w-0 flex-grow'> <h4 className="font-medium text-gray-800 truncate" title={post.title}>{post.title}</h4> <p className="text-xs text-gray-500">Status: <span className={`font-semibold ${post.status === 'published' ? 'text-green-600' : 'text-yellow-600'}`}>{post.status}</span>{post.isFeatured && <span className="ml-2 text-pink-500">(Featured)</span>}<span className="mx-2">|</span>Categories: {post.categories.join(', ') || 'N/A'}</p> </div> </div> <div className="flex space-x-2 self-end sm:self-center flex-shrink-0 mt-2 sm:mt-0"><Button variant="outline" size="sm" onClick={() => handleEditItem(post as AllListItems, 'blog')} className="text-blue-600 border-blue-300 hover:bg-blue-50"><Edit className="h-4 w-4 mr-1"/> Edit</Button><Button variant="destructive" size="sm" onClick={() => handleDeleteItem(post._id, 'blog post', '/blogs', fetchBlogPosts)} className="bg-red-500 hover:bg-red-600"><Trash2 className="h-4 w-4 mr-1"/> Delete</Button></div> </li> )})}</ul>)} </div>
-        </motion.section> )}
+        </motion.section></motion.div> )}
+
+        {activeSection === 'appointments' && (
+            <motion.section id="appointments-section" key="appointments" className="bg-white p-6 sm:p-8 shadow-xl rounded-lg">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
+                    <div className="flex items-center mb-4 sm:mb-0">
+                        <ClipboardList className="h-8 w-8 text-pink-600 mr-3" />
+                        <h2 className="text-2xl font-semibold text-gray-800">Manage Appointments</h2>
+                    </div>
+                    <div className="flex space-x-2">
+                        <Button variant="outline" size="sm" onClick={fetchAppointments} disabled={isLoadingItems}>
+                            {isLoadingItems ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : <ListChecks className="h-4 w-4 mr-2" />}
+                            Refresh List
+                        </Button>
+                        <Button variant="default" size="sm" onClick={() => downloadAppointmentsAsCSV(appointments)} disabled={appointments.length === 0} className="bg-green-600 hover:bg-green-700">
+                           <Download className="h-4 w-4 mr-2" />
+                           Download as Excel
+                        </Button>
+                    </div>
+                </div>
+
+                {isLoadingItems && <div className="flex justify-center py-10"><Loader2 className="h-10 w-10 animate-spin text-pink-500"/></div>}
+                {listError && <p className="text-red-500 bg-red-50 p-4 rounded-md">{listError}</p>}
+                {!isLoadingItems && !listError && appointments.length === 0 && <p className="text-gray-500 text-center py-10">No appointment requests found.</p>}
+                {!isLoadingItems && !listError && appointments.length > 0 && (
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Details</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Message</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {appointments.map((appt) => (
+                                    <tr key={appt._id}>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(appt.createdAt).toLocaleDateString()}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm font-medium text-gray-900">{appt.name}</div>
+                                            <div className="text-sm text-gray-500">{`Age: ${appt.age}, ${appt.gender}, ${appt.city}`}</div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                             <div className="text-sm text-gray-900">{appt.email}</div>
+                                             <div className="text-sm text-gray-500">{appt.phone}</div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-sm text-gray-700 w-48 truncate" title={appt.message}>{appt.message}</p>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <select
+                                                value={appt.status}
+                                                onChange={(e) => handleUpdateAppointmentStatus(appt._id, e.target.value)}
+                                                className="block w-full pl-3 pr-8 py-1.5 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                                            >
+                                                <option>New</option>
+                                                <option>Contacted</option>
+                                                <option>Completed</option>
+                                                <option>Cancelled</option>
+                                            </select>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <Button variant="destructive" size="sm" onClick={() => handleDeleteAppointment(appt._id)} className="bg-red-500 hover:bg-red-600">
+                                                <Trash2 className="h-4 w-4"/>
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </motion.section>
+        )}
 
         {activeSection === 'settings' && (
-            <motion.section id="settings-form-section" key="settings-form" className="bg-white p-6 sm:p-8 shadow-xl rounded-lg">
+            <motion.div className="max-w-4xl mx-auto"><motion.section id="settings-form-section" key="settings-form" className="bg-white p-6 sm:p-8 shadow-xl rounded-lg">
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center">
                         <SlidersHorizontal className="h-8 w-8 text-pink-600 mr-3" />
@@ -373,21 +518,10 @@ export default function AdminDashboardPage() {
                 </div>
                 <form onSubmit={handleSettingsSubmit} className="space-y-6">
                     <div>
-                        <label htmlFor="appointment_url" className={LABEL_CLASS}>
-                            Book Appointment URL <span className="text-red-500">*</span>
-                        </label>
+                        <label htmlFor="appointment_url" className={LABEL_CLASS}> Book Appointment URL <span className="text-red-500">*</span> </label>
                         <div className="relative">
                             <LinkIcon className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/>
-                            <Input
-                                type="url"
-                                name="value"
-                                id="appointment_url"
-                                value={settingsFormData.value}
-                                onChange={(e) => setSettingsFormData({ ...settingsFormData, value: e.target.value })}
-                                required
-                                className={INPUT_CLASS}
-                                placeholder="https://your-booking-link.com"
-                            />
+                            <Input type="url" name="value" id="appointment_url" value={settingsFormData.value} onChange={(e) => setSettingsFormData({ ...settingsFormData, value: e.target.value })} required className={INPUT_CLASS} placeholder="https://your-booking-link.com" />
                         </div>
                         <p className="text-xs text-gray-500 mt-2">This URL will be used for the "Book Appointment" button on the contact page.</p>
                     </div>
@@ -398,51 +532,14 @@ export default function AdminDashboardPage() {
                         </Button>
                     </div>
                 </form>
-            </motion.section>
+            </motion.section></motion.div>
         )}
 
       </div>
 
         {isEpisodeModalOpen && currentManagingSeries && ( <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4"> <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col"> <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10"> <h3 className="text-xl font-semibold text-gray-900">Manage Episodes for: <span className="text-pink-600">{currentManagingSeries.title}</span></h3> <Button variant="ghost" size="icon" onClick={() => setIsEpisodeModalOpen(false)} className="text-gray-500 hover:text-gray-800"><X size={24} /></Button> </div> <div className="p-6 overflow-y-auto space-y-8"> <section id="podcastEpisode-form-section"> <div className="flex items-center justify-between mb-4"> <h4 className="text-lg font-semibold text-gray-700">{isEditingPodcastEpisode ? 'Edit Episode' : 'Add New Episode'}</h4> {isEditingPodcastEpisode && (<Button variant="outline" size="sm" onClick={() => handleAddNew('podcastEpisode')}><PlusCircle className="h-4 w-4 mr-2" /> Add New Episode</Button>)} </div> {episodeModalSuccess && <div className="mb-4 p-3 rounded-md bg-green-50 text-green-700 flex items-center"><CheckCircle className="h-5 w-5 mr-2"/> {episodeModalSuccess}</div>} {episodeModalError && <div className="mb-4 p-3 rounded-md bg-red-50 text-red-700 flex items-center"><AlertCircle className="h-5 w-5 mr-2"/> {episodeModalError}</div>} <form onSubmit={handlePodcastEpisodeSubmit} className="space-y-4"> <div><label htmlFor="title-episode" className={LABEL_CLASS}>Episode Title <span className="text-red-500">*</span></label><div className="relative"><Type className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="text" name="title" id="title-episode" value={podcastEpisodeFormData.title} onChange={(e) => handleInputChange(e, 'podcastEpisode')} required className={INPUT_CLASS}/></div></div> {renderFileInput("thumbnail-episode", "Episode Thumbnail", podcastEpisodeThumbnailRef, handlePodcastEpisodeThumbnailChange, podcastEpisodeThumbnailPreview, false, true, isEditingPodcastEpisode)} <div><label htmlFor="description-episode" className={LABEL_CLASS}>Description <span className="text-red-500">*</span></label><div className="relative"><FileText className={`${ICON_CLASS} absolute left-3 top-3`}/><Textarea name="description" id="description-episode" value={podcastEpisodeFormData.description} onChange={(e) => handleInputChange(e, 'podcastEpisode')} rows={3} required className={TEXTAREA_CLASS_NAME}></Textarea></div></div> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <div><label htmlFor="episodeNumber-episode" className={LABEL_CLASS}>Episode No. <span className="text-red-500">*</span></label><div className="relative"><Hash className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="number" name="episodeNumber" id="episodeNumber-episode" value={podcastEpisodeFormData.episodeNumber} onChange={(e) => handleInputChange(e, 'podcastEpisode')} required className={INPUT_CLASS} min="1"/></div></div> <div><label htmlFor="duration-episode" className={LABEL_CLASS}>Duration (e.g., 35 min) <span className="text-red-500">*</span></label><div className="relative"><Clock className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="text" name="duration" id="duration-episode" value={podcastEpisodeFormData.duration} onChange={(e) => handleInputChange(e, 'podcastEpisode')} required className={INPUT_CLASS}/></div></div> </div> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <div><label htmlFor="youtubeLink-episode" className={LABEL_CLASS}>YouTube Link <span className="text-red-500">*</span></label><div className="relative"><Youtube className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="url" name="youtubeLink" id="youtubeLink-episode" value={podcastEpisodeFormData.youtubeLink} onChange={(e) => handleInputChange(e, 'podcastEpisode')} required className={INPUT_CLASS}/></div></div> <div><label htmlFor="publishDate-episode" className={LABEL_CLASS}>Publish Date</label><div className="relative"><CalendarDays className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="date" name="publishDate" id="publishDate-episode" value={podcastEpisodeFormData.publishDate} onChange={(e) => handleInputChange(e, 'podcastEpisode')} className={INPUT_CLASS}/></div></div> </div> <div className="pt-2"><Button type="submit" disabled={episodeLoading} className={SUBMIT_BUTTON_CLASS}> {episodeLoading ? <Loader2 className="animate-spin mr-2 h-5 w-5"/> : <PlusCircle className="h-5 w-5 mr-2" />}{isEditingPodcastEpisode ? 'Update Episode' : 'Add Episode'} </Button></div> </form> </section> <section> {renderItemList<PodcastEpisodeListItem>( podcastEpisodeList, 'podcastEpisode', (item) => handleEditPodcastEpisode(item), (id) => handleDeletePodcastEpisode(id), () => { if(currentManagingSeries) fetchPodcastEpisodesForSeries(currentManagingSeries._id); }, undefined )} </section> </div> </div> </motion.div> )}
 
-        {isProgramItemModalOpen && currentManagingProgramSeries && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
-                <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
-                    <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10">
-                        <h3 className="text-xl font-semibold text-gray-900">Manage Programs for: <span className="text-pink-600">{currentManagingProgramSeries.title}</span></h3>
-                        <Button variant="ghost" size="icon" onClick={() => setIsProgramItemModalOpen(false)} className="text-gray-500 hover:text-gray-800"><X size={24} /></Button>
-                    </div>
-                    <div className="p-6 overflow-y-auto space-y-8">
-                        <section id="programItem-form-section">
-                            <div className="flex items-center justify-between mb-4">
-                                <h4 className="text-lg font-semibold text-gray-700">{isEditingProgramItem ? 'Edit Program' : 'Add New Program'}</h4>
-                                {isEditingProgramItem && (<Button variant="outline" size="sm" onClick={() => handleAddNew('programItem')}><PlusCircle className="h-4 w-4 mr-2" /> Add New Program</Button>)}
-                            </div>
-                            {programItemModalSuccess && <div className="mb-4 p-3 rounded-md bg-green-50 text-green-700 flex items-center"><CheckCircle className="h-5 w-5 mr-2"/> {programItemModalSuccess}</div>}
-                            {programItemModalError && <div className="mb-4 p-3 rounded-md bg-red-50 text-red-700 flex items-center"><AlertCircle className="h-5 w-5 mr-2"/> {programItemModalError}</div>}
-                            <form onSubmit={handleProgramItemSubmit} className="space-y-4">
-                                <div><label htmlFor="title-programItem" className={LABEL_CLASS}>Program Title <span className="text-red-500">*</span></label><div className="relative"><Type className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="text" name="title" id="title-programItem" value={programItemFormData.title} onChange={(e) => handleInputChange(e, 'programItem')} required className={INPUT_CLASS}/></div></div>
-                                {renderFileInput("thumbnail-programItem", "Program Thumbnail", programItemThumbnailRef, handleProgramItemThumbnailChange, programItemThumbnailPreview, false, true, isEditingProgramItem)}
-                                {renderFileInput("videoFile-programItem", "Program Video File", programItemVideoRef, handleProgramItemVideoChange, programItemVideoName, true, true, isEditingProgramItem, <VideoIcon className={ICON_CLASS} />)}
-                                <div><label htmlFor="description-programItem" className={LABEL_CLASS}>Description <span className="text-red-500">*</span></label><div className="relative"><FileText className={`${ICON_CLASS} absolute left-3 top-3`}/><Textarea name="description" id="description-programItem" value={programItemFormData.description} onChange={(e) => handleInputChange(e, 'programItem')} rows={3} required className={TEXTAREA_CLASS_NAME}></Textarea></div></div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div><label htmlFor="price-programItem" className={LABEL_CLASS}>Price (INR) <span className="text-red-500">*</span></label><div className="relative"><DollarSign className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="number" name="price" id="price-programItem" value={programItemFormData.price} onChange={(e) => handleInputChange(e, 'programItem')} required className={INPUT_CLASS} min="0"/></div></div>
-                                    <div><label htmlFor="duration-programItem" className={LABEL_CLASS}>Duration (e.g., 35 min) <span className="text-red-500">*</span></label><div className="relative"><Clock className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="text" name="duration" id="duration-programItem" value={programItemFormData.duration} onChange={(e) => handleInputChange(e, 'programItem')} required className={INPUT_CLASS}/></div></div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div><label htmlFor="episodeNumber-programItem" className={LABEL_CLASS}>Order No. (in series) <span className="text-red-500">*</span></label><div className="relative"><Hash className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="number" name="episodeNumber" id="episodeNumber-programItem" value={programItemFormData.episodeNumber || ''} onChange={(e) => handleInputChange(e, 'programItem')} required className={INPUT_CLASS} min="1"/></div></div>
-                                    <div><label htmlFor="publishDate-programItem" className={LABEL_CLASS}>Publish Date (Opt)</label><div className="relative"><CalendarDays className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="date" name="publishDate" id="publishDate-programItem" value={programItemFormData.publishDate || new Date().toISOString().split('T')[0]} onChange={(e) => handleInputChange(e, 'programItem')} className={INPUT_CLASS}/></div></div>
-                                </div>
-                                <div className="pt-2"><Button type="submit" disabled={programItemLoading} className={SUBMIT_BUTTON_CLASS}> {programItemLoading ? <Loader2 className="animate-spin mr-2 h-5 w-5"/> : <PlusCircle className="h-5 w-5 mr-2" />}{isEditingProgramItem ? 'Update Program' : 'Add Program'} </Button></div>
-                            </form>
-                        </section>
-                        <section>
-                           {renderItemList<ProgramItemListItem>( programItemList, 'programItem', (item) => handleEditProgramItem(item), (id) => handleDeleteProgramItem(id), () => { if(currentManagingProgramSeries) fetchProgramItemsForSeries(currentManagingProgramSeries._id); }, undefined )}
-                        </section>
-                    </div>
-                </div>
-            </motion.div>
-        )}
+        {isProgramItemModalOpen && currentManagingProgramSeries && ( <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4"> <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col"> <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10"> <h3 className="text-xl font-semibold text-gray-900">Manage Programs for: <span className="text-pink-600">{currentManagingProgramSeries.title}</span></h3> <Button variant="ghost" size="icon" onClick={() => setIsProgramItemModalOpen(false)} className="text-gray-500 hover:text-gray-800"><X size={24} /></Button> </div> <div className="p-6 overflow-y-auto space-y-8"> <section id="programItem-form-section"> <div className="flex items-center justify-between mb-4"> <h4 className="text-lg font-semibold text-gray-700">{isEditingProgramItem ? 'Edit Program' : 'Add New Program'}</h4> {isEditingProgramItem && (<Button variant="outline" size="sm" onClick={() => handleAddNew('programItem')}><PlusCircle className="h-4 w-4 mr-2" /> Add New Program</Button>)} </div> {programItemModalSuccess && <div className="mb-4 p-3 rounded-md bg-green-50 text-green-700 flex items-center"><CheckCircle className="h-5 w-5 mr-2"/> {programItemModalSuccess}</div>} {programItemModalError && <div className="mb-4 p-3 rounded-md bg-red-50 text-red-700 flex items-center"><AlertCircle className="h-5 w-5 mr-2"/> {programItemModalError}</div>} <form onSubmit={handleProgramItemSubmit} className="space-y-4"> <div><label htmlFor="title-programItem" className={LABEL_CLASS}>Program Title <span className="text-red-500">*</span></label><div className="relative"><Type className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="text" name="title" id="title-programItem" value={programItemFormData.title} onChange={(e) => handleInputChange(e, 'programItem')} required className={INPUT_CLASS}/></div></div> {renderFileInput("thumbnail-programItem", "Program Thumbnail", programItemThumbnailRef, handleProgramItemThumbnailChange, programItemThumbnailPreview, false, true, isEditingProgramItem)} {renderFileInput("videoFile-programItem", "Program Video File", programItemVideoRef, handleProgramItemVideoChange, programItemVideoName, true, true, isEditingProgramItem, <VideoIcon className={ICON_CLASS} />)} <div><label htmlFor="description-programItem" className={LABEL_CLASS}>Description <span className="text-red-500">*</span></label><div className="relative"><FileText className={`${ICON_CLASS} absolute left-3 top-3`}/><Textarea name="description" id="description-programItem" value={programItemFormData.description} onChange={(e) => handleInputChange(e, 'programItem')} rows={3} required className={TEXTAREA_CLASS_NAME}></Textarea></div></div> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <div><label htmlFor="price-programItem" className={LABEL_CLASS}>Price (INR) <span className="text-red-500">*</span></label><div className="relative"><DollarSign className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="number" name="price" id="price-programItem" value={programItemFormData.price} onChange={(e) => handleInputChange(e, 'programItem')} required className={INPUT_CLASS} min="0"/></div></div> <div><label htmlFor="duration-programItem" className={LABEL_CLASS}>Duration (e.g., 35 min) <span className="text-red-500">*</span></label><div className="relative"><Clock className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="text" name="duration" id="duration-programItem" value={programItemFormData.duration} onChange={(e) => handleInputChange(e, 'programItem')} required className={INPUT_CLASS}/></div></div> </div> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <div><label htmlFor="episodeNumber-programItem" className={LABEL_CLASS}>Order No. (in series) <span className="text-red-500">*</span></label><div className="relative"><Hash className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="number" name="episodeNumber" id="episodeNumber-programItem" value={programItemFormData.episodeNumber || ''} onChange={(e) => handleInputChange(e, 'programItem')} required className={INPUT_CLASS} min="1"/></div></div> <div><label htmlFor="publishDate-programItem" className={LABEL_CLASS}>Publish Date (Opt)</label><div className="relative"><CalendarDays className={`${ICON_CLASS} absolute left-3 top-1/2 -translate-y-1/2`}/><Input type="date" name="publishDate" id="publishDate-programItem" value={programItemFormData.publishDate || new Date().toISOString().split('T')[0]} onChange={(e) => handleInputChange(e, 'programItem')} className={INPUT_CLASS}/></div></div> </div> <div className="pt-2"><Button type="submit" disabled={programItemLoading} className={SUBMIT_BUTTON_CLASS}> {programItemLoading ? <Loader2 className="animate-spin mr-2 h-5 w-5"/> : <PlusCircle className="h-5 w-5 mr-2" />}{isEditingProgramItem ? 'Update Program' : 'Add Program'} </Button></div> </form> </section> <section> {renderItemList<ProgramItemListItem>( programItemList, 'programItem', (item) => handleEditProgramItem(item), (id) => handleDeleteProgramItem(id), () => { if(currentManagingProgramSeries) fetchProgramItemsForSeries(currentManagingProgramSeries._id); }, undefined )} </section> </div> </div> </motion.div> )}
     </motion.div>
   );
 }
