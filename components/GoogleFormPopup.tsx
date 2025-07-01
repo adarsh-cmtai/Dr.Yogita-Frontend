@@ -151,7 +151,7 @@ export default function GoogleFormPopup({ show, onClose, onSubmitted }: GoogleFo
                 ) : (
                 <>
                     <div className="text-center mb-6 sm:mb-8">
-                      <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">Book Your Free Consultation</h2>
+                      <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">For More Enquiry</h2>
                       <p className="text-sm sm:text-base text-gray-600">
                           Take the first step towards better health.
                       </p>
@@ -232,7 +232,7 @@ export default function GoogleFormPopup({ show, onClose, onSubmitted }: GoogleFo
                               Submitting...
                           </>
                           ) : (
-                          'Confirm & Book Session'
+                          'Submit'
                           )}
                       </button>
                     </form>
