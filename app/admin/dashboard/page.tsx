@@ -3,15 +3,17 @@
 import React, { useState, FormEvent, ChangeEvent, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
-  PlusCircle, Film, Type, FileText, Youtube, Clock, Hash, Image as ImageIcon,
-  AlertCircle, CheckCircle, DollarSign, BookOpen, Video, Book, FileUp, Paperclip,
-  Leaf, Edit3, Trash2, ListChecks, Edit, Loader2, X, SlidersHorizontal, CalendarDays, Link as LinkIcon,
-  PackageSearch, VideoIcon, ClipboardList, Download
+    PlusCircle, Film, Type, FileText, Youtube, Clock, Hash, Image as ImageIcon,
+    AlertCircle, CheckCircle, DollarSign, BookOpen, Video, Book, FileUp, Paperclip,
+    Leaf, Edit3, Trash2, ListChecks, Edit, Loader2, X, SlidersHorizontal, CalendarDays, Link as LinkIcon,
+    PackageSearch, VideoIcon, ClipboardList, Download
 } from 'lucide-react';
 import NextImage from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from '@/components/ui/textarea';
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+import * as XLSX from 'xlsx';
 
 // Interface Definitions
 interface PodcastSeriesFormData { _id?: string; title: string; description: string; category?: string; author?: string; coverImage?: string; }
@@ -28,13 +30,12 @@ interface PodcastEpisodeListItem extends ListItem { thumbnailUrl?: string; episo
 interface ProgramSeriesListItem extends ListItem { coverImageUrl?: string; description?: string; category?: string; author?: string; }
 interface ProgramItemListItem extends ListItem { thumbnailUrl?: string; videoUrl?: string; price?: string; duration?: string; episodeNumber?: string; }
 interface EbookListItem extends ListItem { thumbnail?: { url: string } | string; category?: string; price?: string; pages?: string; razorpayPaymentLink?: string; pdfFileUrl?: string | string[]; pdfFile?: string | string[]; thumbnailUrl?: string | string[] }
-interface NutritionPlanListItem extends ListItem { thumbnail?: { url: string } | string; category?: string; price?: string; pages?: string; razorpayPaymentLink?: string; pdfFileUrl?: string | string[]; pdfFile?: string | string[]; thumbnailUrl?: string | string[]; pdfDocument?: {url: string} | string | string[] }
+interface NutritionPlanListItem extends ListItem { thumbnail?: { url: string } | string; category?: string; price?: string; pages?: string; razorpayPaymentLink?: string; pdfFileUrl?: string | string[]; pdfFile?: string | string[]; thumbnailUrl?: string | string[]; pdfDocument?: { url: string } | string | string[] }
 interface BlogPostForList { _id: string; title: string; slug: string; categories: string[]; status: 'draft' | 'published'; isFeatured: boolean; createdAt: string; updatedAt: string; coverImage?: { url: string }; author?: string; }
 interface BlogPost extends BlogPostForList { content: string; excerpt: string; metaTitle?: string; metaDescription?: string; readingTime?: string; }
 type AllListItems = PodcastSeriesListItem | ProgramSeriesListItem | EbookListItem | NutritionPlanListItem | BlogPostForList;
 
-const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api`;
-
+const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/api` || "http://localhost:5001/api";
 const INPUT_CLASS = "mt-1 block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm";
 const TEXTAREA_CLASS_NAME = "mt-1 block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm min-h-[100px]";
 const LABEL_CLASS = "block text-sm font-medium text-gray-700 mb-1";
@@ -47,17 +48,10 @@ const SUBMIT_BUTTON_CLASS = "w-full flex justify-center items-center py-3 px-4 b
 
 const getFullImageUrl = (relativePathFromServer?: string): string | undefined => {
     if (!relativePathFromServer) return undefined;
-    if (relativePathFromServer.startsWith('http') || relativePathFromServer.startsWith('blob:')) {
-        return relativePathFromServer;
-    }
-    const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+    if (relativePathFromServer.startsWith('http') || relativePathFromServer.startsWith('blob:')) { return relativePathFromServer; }
+    const backendBaseUrl = (`${process.env.NEXT_PUBLIC_API_URL}/api` || "http://localhost:5001/api").replace(/\/api$/, '');
     const path = relativePathFromServer.startsWith('/') ? relativePathFromServer : `/${relativePathFromServer}`;
-    try {
-        return new URL(path, backendBaseUrl).toString();
-    } catch (e) {
-        console.error("Error constructing full image URL:", e);
-        return undefined;
-    }
+    try { return new URL(path, backendBaseUrl).toString(); } catch (e) { console.error("Error constructing full image URL:", e); return undefined; }
 };
 
 export default function AdminDashboardPage() {
@@ -257,57 +251,78 @@ export default function AdminDashboardPage() {
     const handleDeleteItem = async (itemId: string, itemType: string, endpoint: string, fetchListFunction: () => void) => { if (!window.confirm(`Are you sure you want to delete this ${itemType}?`)) return; setLoading(true); setError(null); setSuccess(null); try { const response = await fetch(`${API_BASE_URL}${endpoint}/${itemId}`, { method: 'DELETE' }); const result = await response.json(); if (!response.ok && !(result.success || result.message === `${itemType.charAt(0).toUpperCase() + itemType.slice(1)} removed` || result.message === `${itemType.charAt(0).toUpperCase() + itemType.slice(1)} removed successfully`)) { throw new Error(result.error || result.message || `Failed to delete ${itemType}`); } setSuccess(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} deleted successfully!`); fetchListFunction(); } catch (err: any) { setError(err.message); } finally { setLoading(false); setTimeout(() => { setSuccess(null); setError(null); }, 3000); } };
 
     const handleUpdateAppointmentStatus = async (id: string, status: string) => {
-        setLoading(true); setError(null); setSuccess(null);
+        setLoading(true);
+        setError(null);
+        setSuccess(null);
         try {
-            const response = await fetch(`${API_BASE_URL}/appointments/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }), });
+            const response = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status }),
+            });
             const result = await response.json();
             if (!result.success) throw new Error(result.error || 'Failed to update status');
             setSuccess('Status updated successfully!');
             fetchAppointments();
-        } catch (err: any) { setError(err.message); }
-        finally { setLoading(false); setTimeout(() => { setSuccess(null); setError(null); }, 3000); }
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+            setTimeout(() => { setSuccess(null); setError(null); }, 3000);
+        }
     };
 
     const handleDeleteAppointment = async (id: string) => {
         if (!window.confirm("Are you sure you want to delete this appointment?")) return;
-        setLoading(true); setError(null); setSuccess(null);
+        setLoading(true);
+        setError(null);
+        setSuccess(null);
         try {
             const response = await fetch(`${API_BASE_URL}/appointments/${id}`, { method: 'DELETE' });
             const result = await response.json();
             if (!result.success) throw new Error(result.error || 'Failed to delete appointment');
             setSuccess('Appointment deleted successfully!');
             fetchAppointments();
-        } catch (err: any) { setError(err.message); }
-        finally { setLoading(false); setTimeout(() => { setSuccess(null); setError(null); }, 3000); }
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+            setTimeout(() => { setSuccess(null); setError(null); }, 3000);
+        }
     };
 
     const downloadAppointmentsAsCSV = (data: AppointmentListItem[]) => {
         const headers = ['Date', 'Name', 'Email', 'Phone', 'Age', 'Gender', 'City', 'Consultation Mode', 'Status', 'Message'];
-        const csvRows = [headers.join(',')];
-        for (const item of data) {
-            const values = [
-                new Date(item.createdAt).toLocaleString(),
-                `"${item.name.replace(/"/g, '""')}"`,
-                `"${item.email.replace(/"/g, '""')}"`,
-                `'${item.phone}`,
-                item.age,
-                item.gender,
-                `"${item.city.replace(/"/g, '""')}"`,
-                item.consultationMode,
-                item.status,
-                `"${item.message.replace(/"/g, '""').replace(/\n/g, ' ')}"`,
-            ];
-            csvRows.push(values.join(','));
-        }
-        const csvString = csvRows.join('\n');
-        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', 'appointments.csv');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+
+        const formattedData = data.map(item => ({
+            'Date': new Date(item.createdAt).toLocaleString(),
+            'Name': item.name,
+            'Email': item.email,
+            'Phone': item.phone,
+            'Age': item.age,
+            'Gender': item.gender,
+            'City': item.city,
+            'Consultation Mode': item.consultationMode,
+            'Status': item.status,
+            'Message': item.message.replace(/\n/g, ' ')
+        }));
+
+        const colWidths = headers.map(header => ({ wch: header.length }));
+
+        formattedData.forEach(row => {
+            Object.values(row).forEach((cell, i) => {
+                const currentLength = cell ? String(cell).length : 0;
+                if (currentLength > colWidths[i].wch) {
+                    colWidths[i].wch = currentLength;
+                }
+            });
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(formattedData);
+        worksheet['!cols'] = colWidths;
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Appointments');
+        XLSX.writeFile(workbook, 'appointments.xlsx');
     };
 
     const handleAddNew = (section: 'podcastSeries' | 'podcastEpisode' | 'programSeries' | 'programItem' | 'ebook' | 'nutrition' | 'blog') => { resetForm(section); };
