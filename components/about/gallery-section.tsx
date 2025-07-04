@@ -17,7 +17,7 @@ export default function GallerySection() {
       category: "Clinic",
     },
     {
-      src: "/gallery/Consultant Area.JPG",
+      src: "/gallery/Consultant Area.jpg",
       alt: "Clinic Consultant Area ",
       category: "Clinic",
     },
