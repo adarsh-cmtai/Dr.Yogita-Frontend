@@ -4,8 +4,8 @@ import { Playfair_Display as PlayfairDisplay, Poppins } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import Navbar from "@/components/navbar"
-// Import the WhatsAppChat component at the top of the file
 import WhatsAppChat from "@/components/whatsapp-chat"
+import Script from "next/script"
 
 const playfair = PlayfairDisplay({
   subsets: ["latin"],
@@ -24,10 +24,9 @@ export const metadata: Metadata = {
   title: "Dr. Yogita Physiotherapy | Pain-Free Living. Powerful Healing.",
   description:
     "Expert physiotherapy services with 22+ years of experience. Relieve pain and regain power with Dr. Yogita's specialized care.",
-    generator: 'v0.dev'
+  generator: "v0.dev",
 }
 
-// Add the WhatsAppChat component inside the body tag, just before the closing ThemeProvider tag
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -35,6 +34,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* ✅ Google Analytics */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-F06NY9SX94"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-F06NY9SX94');
+          `}
+        </Script>
+      </head>
       <body className={`${playfair.variable} ${poppins.variable} font-poppins`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <Navbar />
