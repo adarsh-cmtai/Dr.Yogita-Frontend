@@ -77,7 +77,7 @@ export default function FooterSection() {
             </p>
             <div className="flex space-x-4">
               <Link
-                href="https://www.instagram.com/p/DFVMC3oylcq/?img_index=1"
+                href="https://www.instagram.com/pain_relief_studio"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-pink-500 transition-colors"
