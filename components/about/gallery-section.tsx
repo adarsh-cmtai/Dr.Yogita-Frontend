@@ -48,7 +48,7 @@ export default function GallerySection() {
     },
   
     {
-      src: "/gallery/WAITING AREA.jpg",
+      src: "/gallery/Waiting Area.jpg",
       alt: "Waiting Area",
       category: "Clinic",
     },
