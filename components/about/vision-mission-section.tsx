@@ -49,7 +49,7 @@ export default function VisionMissionSection() {
               Our Mission
             </h3>
             <p className="text-gray-700 leading-relaxed text-center md:text-left">
-              My mission is to provide professional, compassionate, and result-driven physiotherapy—online and offline—to help people relieve pain, improve posture, and restore mobility. I am committed to educating individuals about the root causes of their discomfort and guiding them through simple, customized exercises that bring lasting relief. By combining my 22+ years of experience with modern technology and psychological insight, I aim to reach more people—especially working professionals—and support them in living stronger, pain-free, and more confident lives.
+              My mission is to provide professional, compassionate, and result-driven physiotherapy—online and clinic—to help people relieve pain, improve posture, and restore mobility. I am committed to educating individuals about the root causes of their discomfort and guiding them through simple, customized exercises that bring lasting relief. By combining my 22+ years of experience with modern technology and psychological insight, I aim to reach more people—especially working professionals—and support them in living stronger, pain-free, and more confident lives.
             </p>
           </motion.div>
         </div>
