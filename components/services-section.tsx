@@ -10,12 +10,12 @@ import { SpadeIcon as Spine, ArrowUpRight, MonitorSmartphone, BatteryCharging } 
 export default function ServicesSection() {
   const services = [
     {
-      title: "Pain Relief & Recovery (Online & Offline)",
+      title: "Pain Relief & Recovery (Online & Clinic)",
       description: "Targeted therapy to reduce back, neck, and joint pain effectively, available both virtually and in-person.",
       icon: <Spine className="h-10 w-10 text-pink-500" />,
     },
     {
-      title: "Posture & Spine Care (Online & Offline)",
+      title: "Posture & Spine Care (Online & Clinic)",
       description: "Personalized programs to improve posture and prevent spine-related issues, accessible through virtual consultations or face-to-face sessions.",
       icon: <ArrowUpRight className="h-10 w-10 text-pink-500" />,
     },
@@ -25,7 +25,7 @@ export default function ServicesSection() {
       icon: <MonitorSmartphone className="h-10 w-10 text-pink-500" />,
     },
     {
-      title: " Strength & Wellness Programs (Online & Offline)",
+      title: " Strength & Wellness Programs (Online & Clinic)",
       description: "Build strength, improve flexibility, and enhance overall well-being through in-person sessions or virtual support.",
       icon: <BatteryCharging className="h-10 w-10 text-pink-500" />,
     },
