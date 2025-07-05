@@ -126,14 +126,14 @@ export default function Navbar() {
   }, []);
 
   const servicesList = [
-    { name: "CoreCare Physio", href: "/services/core-care", type: "offline" },
-    { name: "Electrotherapy Healing", href: "/services/healing-with-electrotherapy", type: "offline" },
-    { name: "Manual Therapy", href: "/services/manual-therapy-and-mobilisation", type: "offline" },
-    { name: "Post-Surgery Rehab", href: "/services/post-surgery-rehabilitation", type: "offline" },
-    { name: "Align & Thrive", href: "/services/align-and-thrive", type: "offline" },
-    { name: "OrthoCare Physio", href: "/services/ortho-care", type: "offline" },
-    { name: "Lifespan Physio", href: "/services/lifespan-pysiocare", type: "offline" },
-    { name: "SheMoves Physio", href: "/services/she-moves", type: "offline" },
+    { name: "CoreCare Physio", href: "/services/core-care", type: "Clinic" },
+    { name: "Electrotherapy Healing", href: "/services/healing-with-electrotherapy", type: "Clinic" },
+    { name: "Manual Therapy", href: "/services/manual-therapy-and-mobilisation", type: "Clinic" },
+    { name: "Post-Surgery Rehab", href: "/services/post-surgery-rehabilitation", type: "Clinic" },
+    { name: "Align & Thrive", href: "/services/align-and-thrive", type: "Clinic" },
+    { name: "OrthoCare Physio", href: "/services/ortho-care", type: "Clinic" },
+    { name: "Lifespan Physio", href: "/services/lifespan-pysiocare", type: "Clinic" },
+    { name: "SheMoves Physio", href: "/services/she-moves", type: "Clinic" },
     { name: "PhysioConnect", href: "/services/physiotherapy", type: "online" },
     { name: "Back & Neck Pain Relief", href: "/services/back-neck-pain", type: "online" },
     { name: "Posture Correction", href: "/services/posture-correction", type: "online" },
@@ -195,7 +195,7 @@ export default function Navbar() {
                     className="absolute left-0 mt-2 w-56 bg-white rounded-md shadow-lg z-50"
                   >
                     <div className="py-1">
-                      {["online", "offline"].map((type) => (
+                      {["online", "Clinic"].map((type) => (
                         <div key={type} className="group relative">
                           <div className="flex justify-between items-center px-4 py-2 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-800 cursor-pointer">
                             {type.charAt(0).toUpperCase() + type.slice(1)} Services
@@ -376,7 +376,7 @@ export default function Navbar() {
                             onClick={toggleOffline} 
                             className="w-full flex justify-between items-center py-2 text-sm text-gray-600 rounded-md hover:text-pink-600 hover:bg-pink-50 pl-2 pr-3"
                           >
-                            <span>Offline Services</span>
+                            <span>Clinic Services</span>
                             <ChevronRight className={`h-4 w-4 transition-transform ${offlineOpen ? "rotate-90" : ""}`} />
                           </button>
                           <AnimatePresence>
@@ -388,7 +388,7 @@ export default function Navbar() {
                                 className="ml-2 max-h-48 overflow-y-auto pr-1 custom-scroll space-y-1 py-1"
                               >
                                 {servicesList
-                                  .filter((service) => service.type === "offline")
+                                  .filter((service) => service.type === "Clinic")
                                   .map((service) => (
                                     <Link
                                       key={service.name}
