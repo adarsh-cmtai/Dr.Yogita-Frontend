@@ -1,9 +1,8 @@
-// components/PodcastModal.tsx
 "use client";
-import { X, Youtube as YoutubeIcon } from "lucide-react"; // Added YoutubeIcon
+import { useState, useEffect } from "react";
+import { X, Loader, AlertTriangle, PlayCircle, Youtube as YoutubeIcon } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
-import { PodcastEpisode } from "../app/podcast/PodcastClientPage"; // Assuming this path is correct
+import { PodcastEpisode } from "../app/podcast/PodcastClientPage"; // Adjust path if necessary
 
 interface PodcastModalProps {
   isOpen: boolean;
@@ -15,6 +14,24 @@ interface PodcastModalProps {
   formatDate: (dateString: string) => string;
 }
 
+const getYouTubeEmbedUrl = (youtubeLink: string) => {
+  if (!youtubeLink) return null;
+  let videoId = null;
+  try {
+    const url = new URL(youtubeLink);
+    if (url.hostname === "youtu.be") {
+      videoId = url.pathname.slice(1);
+    } else if (url.hostname.includes("youtube.com") && url.searchParams.has("v")) {
+      videoId = url.searchParams.get("v");
+    }
+  } catch (error) {
+    console.error("Invalid YouTube URL provided:", youtubeLink);
+    return null;
+  }
+  
+  return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0` : null;
+};
+
 export function PodcastModal({
   isOpen,
   onClose,
@@ -24,86 +41,128 @@ export function PodcastModal({
   error,
   formatDate,
 }: PodcastModalProps) {
+  const [activeEpisode, setActiveEpisode] = useState<PodcastEpisode | null>(null);
+
+  useEffect(() => {
+    if (episodes.length > 0 && !activeEpisode) {
+      setActiveEpisode(episodes[0]);
+    } else if (!episodes.length) {
+      setActiveEpisode(null);
+    }
+  }, [episodes, activeEpisode]);
+  
+  // Reset active episode when modal is closed or episodes change
+  useEffect(() => {
+    if (!isOpen) {
+      setActiveEpisode(null);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
+  const activeEmbedUrl = activeEpisode ? getYouTubeEmbedUrl(activeEpisode.youtubeLink) : null;
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 transition-opacity duration-300 ease-in-out">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
-        {/* Modal Header */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-200 sticky top-0 bg-white z-10">
-          <h3 className="text-xl sm:text-2xl font-semibold text-pink-700">
-            {seriesTitle} - Episodes
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 transition-opacity duration-300 ease-in-out">
+      <div className="bg-gray-50 rounded-xl shadow-2xl w-full max-w-4xl h-full max-h-[95vh] flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+          <h3 className="text-xl font-semibold text-pink-700 truncate pr-4">
+            {seriesTitle}
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-pink-600 transition-colors p-1 rounded-full -mr-1"
+            className="text-gray-500 hover:text-pink-600 transition-colors p-1 rounded-full shrink-0"
             aria-label="Close modal"
           >
             <X size={28} />
           </button>
         </div>
 
-        {/* Modal Content */}
-        <div className="p-4 sm:p-6 overflow-y-auto styled-scrollbar"> {/* Added styled-scrollbar if you have custom scrollbar styles */}
-          {loading && <p className="text-center text-gray-600 py-10">Loading episodes...</p>}
-          {error && <p className="text-center text-red-600 py-10">Error: {error}</p>}
-          {!loading && !error && episodes.length === 0 && (
-            <p className="text-center text-gray-500 py-10">
-              No episodes available for this series yet. Check back soon!
-            </p>
-          )}
-
-          {!loading && !error && episodes.length > 0 && (
-            <ul className="space-y-5">
-              {episodes.map((episode) => (
-                <li 
-                  key={episode._id} 
-                  className="flex flex-col sm:flex-row items-start space-x-0 sm:space-x-5 p-4 border border-gray-200 rounded-lg hover:bg-pink-50 hover:shadow-md transition-all duration-200 group"
-                >
-                  {/* Left: Thumbnail */}
-                  <div className="relative w-full sm:w-40 h-48 sm:h-auto sm:aspect-[16/10] flex-shrink-0 mb-3 sm:mb-0">
-                    <Image
-                      src={episode.thumbnailUrl || "/placeholder-podcast.png"} // Fallback image
-                      alt={episode.title}
-                      fill
-                      className="rounded-md object-cover"
-                      sizes="(max-width: 640px) 100vw, 160px" // Adjusted sizes
-                    />
-                  </div>
-
-                  {/* Right: Details */}
-                  <div className="flex-grow flex flex-col min-w-0"> {/* min-w-0 for proper truncation */}
-                    <span className="text-xs text-pink-600 font-semibold tracking-wider uppercase">
-                      EPISODE {episode.episodeNumber}
-                    </span>
-                    <h4 className="text-lg sm:text-xl font-bold text-gray-800 group-hover:text-pink-700 transition-colors mt-0.5 mb-1 truncate" title={episode.title}>
-                      {episode.title}
-                    </h4>
-                    <p className="text-sm text-gray-600 mb-2 line-clamp-2 sm:line-clamp-3" title={episode.description}>
-                      {episode.description}
-                    </p>
-                    
-                    <div className="mt-auto pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <div className="text-xs text-gray-500">
-                        <span>{formatDate(episode.publishDate)}</span>
-                        <span className="mx-1.5">|</span>
-                        <span>{episode.duration}</span>
-                      </div>
-                      <Link
-                        href={episode.youtubeLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm font-medium text-center text-white bg-pink-600 rounded-md hover:bg-pink-700 focus:ring-4 focus:ring-pink-300 transition-colors shrink-0"
+        <div className="flex flex-col md:flex-row flex-grow min-h-0">
+          <div className="w-full md:w-3/5 flex flex-col bg-white">
+            <div className="relative w-full bg-black aspect-video">
+              {activeEmbedUrl ? (
+                <iframe
+                  key={activeEpisode?._id}
+                  width="100%"
+                  height="100%"
+                  src={activeEmbedUrl}
+                  title={activeEpisode?.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="border-0"
+                ></iframe>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-900">
+                  <YoutubeIcon size={64} />
+                </div>
+              )}
+            </div>
+            <div className="p-4 overflow-y-auto">
+              <span className="text-xs text-pink-600 font-semibold tracking-wider uppercase">
+                {activeEpisode ? `EPISODE ${activeEpisode.episodeNumber}` : " "}
+              </span>
+              <h4 className="text-xl font-bold text-gray-900 mt-1 mb-2">
+                {activeEpisode?.title || "Select an episode to play"}
+              </h4>
+              <p className="text-sm text-gray-700 line-clamp-4">
+                {activeEpisode?.description}
+              </p>
+            </div>
+          </div>
+          
+          <div className="w-full md:w-2/5 flex flex-col border-t md:border-t-0 md:border-l border-gray-200">
+            <div className="p-4 border-b border-gray-200">
+                <h4 className="text-lg font-bold text-gray-800">Episodes ({episodes.length})</h4>
+            </div>
+            <div className="overflow-y-auto flex-grow">
+              {loading && (
+                <div className="flex justify-center items-center h-full p-4">
+                    <Loader className="animate-spin text-pink-600" size={32} />
+                </div>
+              )}
+              {error && (
+                <div className="flex flex-col text-center justify-center items-center h-full p-4">
+                  <AlertTriangle className="text-red-500 mb-2" size={32} />
+                  <p className="font-semibold text-red-600">Error: {error}</p>
+                </div>
+              )}
+              {!loading && !error && (
+                <ul className="divide-y divide-gray-200">
+                  {episodes.map((episode) => (
+                    <li key={episode._id}>
+                      <button
+                        onClick={() => setActiveEpisode(episode)}
+                        className={`w-full text-left p-3 flex items-start gap-3 transition-colors duration-200 ${activeEpisode?._id === episode._id ? "bg-pink-50" : "hover:bg-gray-100"}`}
                       >
-                        <YoutubeIcon className="mr-1.5 h-4 w-4" />
-                        Watch
-                      </Link>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+                        <div className="relative w-24 h-16 flex-shrink-0">
+                          <Image
+                            src={episode.thumbnailUrl || "/placeholder-podcast.png"}
+                            alt={episode.title}
+                            fill
+                            className="rounded-md object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                            <PlayCircle size={24} className={`transition-all ${activeEpisode?._id === episode._id ? "text-pink-500" : "text-white/80"}`} />
+                          </div>
+                        </div>
+                        <div className="flex-grow min-w-0">
+                          <h5 className={`font-semibold truncate ${activeEpisode?._id === episode._id ? "text-pink-700" : "text-gray-800"}`}>
+                            {episode.title}
+                          </h5>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {/* <span>{formatDate(episode.publishDate)}</span> */}
+                            <span className="mx-1.5">|</span>
+                            <span>{episode.duration}</span>
+                          </div>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
