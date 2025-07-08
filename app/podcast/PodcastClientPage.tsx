@@ -1,33 +1,30 @@
-// frontend/app/podcasts/PodcastClientPage.tsx (or your actual path)
 "use client";
 import { motion } from "framer-motion";
-import { ListVideo, Calendar, Clock, Info, PlayCircle } from "lucide-react";
+import { ListVideo, Info } from "lucide-react";
 import Image from "next/image";
-import { Button } from "@/components/ui/button"; // Assuming you have this
-import FooterSection from "@/components/footer-section"; // Assuming you have this
+import { Button } from "@/components/ui/button";
+import FooterSection from "@/components/footer-section";
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { PodcastModal } from "@/components/PodcastModal"; // Path to your Modal component
+import { PodcastModal } from "@/components/PodcastModal";
 
-// Define interfaces for the data structures
 interface PodcastSeries {
   _id: string;
   title: string;
   description: string;
   coverImageUrl: string;
-  slug?: string; // Optional for now, but good for future routing
+  slug?: string;
   category?: string;
   author?: string;
 }
 
-export interface PodcastEpisode { // Export if Modal is in a separate file
+export interface PodcastEpisode {
   _id: string;
-  podcastSeries: string; // ID of the parent series
+  podcastSeries: string;
   title: string;
   description: string;
-  thumbnailUrl: string;
+  thumbnailUrl?: string;
   youtubeLink: string;
-  publishDate: string;
+  publishDate?: string;
   duration: string;
   episodeNumber: number;
 }
@@ -57,9 +54,8 @@ export default function PodcastClientPage() {
   const [loadingEpisodes, setLoadingEpisodes] = useState(false);
   const [errorEpisodes, setErrorEpisodes] = useState<string | null>(null);
 
-  const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/api` || "http://localhost:5001/api";
+  const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api`;
 
-  // Fetch all podcast series
   useEffect(() => {
     const fetchPodcastSeries = async () => {
       try {
@@ -82,13 +78,12 @@ export default function PodcastClientPage() {
     fetchPodcastSeries();
   }, [API_URL]);
 
-  // Function to fetch episodes for a selected series
   const fetchEpisodesForSeries = async (seriesId: string) => {
     if (!seriesId) return;
     try {
       setLoadingEpisodes(true);
       setErrorEpisodes(null);
-      setSelectedSeriesEpisodes([]); // Clear previous episodes
+      setSelectedSeriesEpisodes([]);
       const response = await fetch(`${API_URL}/podcast-episodes/series/${seriesId}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: `HTTP error! status: ${response.status}` }));
@@ -120,14 +115,13 @@ export default function PodcastClientPage() {
   return (
     <>
       <motion.main initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="pt-24 bg-gray-50 min-h-screen">
-        {/* Hero Section - remains similar */}
         <section className="relative h-[60vh] sm:h-screen w-full group">
-          <Image 
-            src="/podcast image.jpg" // Replace with a dynamic or general podcast hero image
-            alt="The Dr. Yogita Show - General Podcast Cover" 
-            fill 
-            className="object-cover" 
-            priority 
+          <Image
+            src="/podcast image.jpg"
+            alt="The Dr. Yogita Show - General Podcast Cover"
+            fill
+            className="object-cover"
+            priority
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80 group-hover:opacity-90 transition-opacity"></div>
           <div className="absolute bottom-10 md:bottom-20 left-10 md:left-20 z-10 p-4">
@@ -159,8 +153,8 @@ export default function PodcastClientPage() {
           {!loadingSeries && !errorSeries && podcastSeriesList.length > 0 && (
             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
               {podcastSeriesList.map((series) => (
-                <div 
-                  key={series._id} 
+                <div
+                  key={series._id}
                   className="rounded-xl border border-gray-200 bg-white shadow-lg hover:shadow-2xl transition-shadow duration-300 flex flex-col overflow-hidden group"
                 >
                   <div className="relative w-full aspect-[16/10] overflow-hidden">
@@ -185,7 +179,7 @@ export default function PodcastClientPage() {
                     {series.author && (
                        <p className="text-xs text-gray-500 font-medium mb-3">By: {series.author}</p>
                     )}
-                    <Button 
+                    <Button
                       onClick={() => handleOpenPlaylistModal(series)}
                       className="w-full mt-auto bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white transition-all"
                       aria-label={`View episodes for ${series.title}`}
