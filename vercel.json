@@ -6,5 +6,5 @@
       "use": "@vercel/next"
     }
   ],
-  "routes": [],
+  "routes": [], 
 }
