@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { X, Loader, AlertTriangle, PlayCircle, Youtube as YoutubeIcon } from "lucide-react";
 import Image from "next/image";
-import { PodcastEpisode } from "../app/podcast/PodcastClientPage"; // Adjust path if necessary
+import { PodcastEpisode } from "../app/podcast/PodcastClientPage"; // Ajusta la ruta si es necesario
 
 interface PodcastModalProps {
   isOpen: boolean;
@@ -28,7 +28,7 @@ const getYouTubeEmbedUrl = (youtubeLink: string) => {
     console.error("Invalid YouTube URL provided:", youtubeLink);
     return null;
   }
-  
+
   return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0` : null;
 };
 
@@ -50,8 +50,7 @@ export function PodcastModal({
       setActiveEpisode(null);
     }
   }, [episodes, activeEpisode]);
-  
-  // Reset active episode when modal is closed or episodes change
+
   useEffect(() => {
     if (!isOpen) {
       setActiveEpisode(null);
@@ -111,7 +110,7 @@ export function PodcastModal({
             </div>
           </div>
           
-          <div className="w-full md:w-2/5 flex flex-col border-t md:border-t-0 md:border-l border-gray-200">
+          <div className="w-full md:w-2/5 flex flex-col flex-1 min-h-0 border-t md:border-t-0 md:border-l border-gray-200">
             <div className="p-4 border-b border-gray-200">
                 <h4 className="text-lg font-bold text-gray-800">Episodes ({episodes.length})</h4>
             </div>
@@ -150,9 +149,13 @@ export function PodcastModal({
                           <h5 className={`font-semibold truncate ${activeEpisode?._id === episode._id ? "text-pink-700" : "text-gray-800"}`}>
                             {episode.title}
                           </h5>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {/* <span>{formatDate(episode.publishDate)}</span> */}
-                            <span className="mx-1.5">|</span>
+                          <div className="text-xs text-gray-500 mt-1 flex items-center">
+                            {episode.publishDate && (
+                              <>
+                                <span>{formatDate(episode.publishDate)}</span>
+                                <span className="mx-1.5">|</span>
+                              </>
+                            )}
                             <span>{episode.duration}</span>
                           </div>
                         </div>
